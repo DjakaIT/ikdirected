@@ -1,13 +1,10 @@
 ---
+import Public from "../layouts/Public.astro";
+import { site } from "../content/site";
 ---
 
-<html lang="hr">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>ikdirected</title>
-  </head>
-  <body>
-    <h1>ikdirected</h1>
-  </body>
-</html>
+<Public title={site.seo.homeTitle} description={site.seo.homeDescription} path="/" current="home">
+  <section>
+    <h1>{site.brand}</h1>
+  </section>
+</Public>

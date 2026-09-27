@@ -1,0 +1,88 @@
+---
+import { site } from "../content/site";
+const year = new Date().getFullYear();
+---
+
+<footer class="foot" id="kontakt">
+  <span class="m dim">{site.contact.label}</span>
+  <h2><a href={`mailto:${site.email}`}>{site.contact.heading[0]}<br />{site.contact.heading[1]}</a></h2>
+  <p class="foot__lead">{site.contact.lead}</p>
+  <div class="foot__g">
+    <div><span class="m">E-mail</span><a href={`mailto:${site.email}`}>{site.email}</a></div>
+    <div><span class="m">Telefon</span><a href={site.phoneHref}>{site.phone}</a></div>
+    <div>
+      <span class="m">Instagram</span><a href={site.instagram.url} rel="me noopener" target="_blank"
+        >{site.instagram.handle}</a
+      >
+    </div>
+    <div><span class="m">Adresa</span><p>{site.address.display}</p></div>
+  </div>
+  <div class="foot__end m dim">
+    <span class="num">© {year} {site.brand}</span>
+    <a href="/radovi">Svi radovi</a>
+    <span>Web: <a href={site.credit.url} target="_blank" rel="noopener">{site.credit.label}</a></span>
+  </div>
+</footer>
+
+<style>
+  .foot {
+    padding: clamp(70px, 12vw, 160px) var(--pad) 30px;
+    color: var(--fg);
+  }
+  h2 {
+    margin-top: var(--s-4);
+    font-size: clamp(2.6rem, 12vw, 11rem);
+    line-height: 0.86;
+    font-weight: 600;
+    letter-spacing: -0.05em;
+    text-transform: uppercase;
+    font-stretch: 112%;
+  }
+  h2 a {
+    display: inline-block;
+    transition: opacity var(--d-2) var(--ease-out);
+  }
+  h2 a:hover {
+    opacity: 0.55;
+  }
+  .foot__lead {
+    max-width: 42ch;
+    margin-top: 26px;
+    font-size: var(--t-lead);
+    color: var(--fg-2);
+  }
+  .foot__g {
+    display: grid;
+    gap: var(--s-5);
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    border-top: 1px solid var(--line);
+    margin-top: clamp(40px, 6vw, 80px);
+    padding-top: 26px;
+  }
+  .foot__g .m {
+    display: block;
+    margin-bottom: var(--s-2);
+    color: var(--dim);
+  }
+  .foot__g a,
+  .foot__g p {
+    display: inline-block;
+    min-height: 24px;
+    color: var(--fg-2);
+  }
+  .foot__g a:hover {
+    color: var(--fg);
+  }
+  .foot__end {
+    display: flex;
+    justify-content: space-between;
+    gap: 14px;
+    flex-wrap: wrap;
+    margin-top: clamp(40px, 7vw, 90px);
+  }
+  .foot__end a {
+    text-decoration: underline;
+    text-underline-offset: 4px;
+    text-decoration-thickness: 1px;
+  }
+</style>

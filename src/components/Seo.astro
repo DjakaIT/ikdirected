@@ -1,0 +1,61 @@
+---
+import { site } from "../content/site";
+import { siteOrigin } from "../lib/env";
+import { absoluteUrl } from "../lib/seo/meta";
+
+export interface SeoImage {
+  url: string;
+  width: number;
+  height: number;
+  alt: string;
+}
+
+interface Props {
+  title: string;
+  description: string;
+  /** Canonical path, e.g. "/radovi". */
+  path: string;
+  image?: SeoImage | undefined;
+  noindex?: boolean | undefined;
+  type?: "website" | "article" | undefined;
+}
+
+const { title, description, path, image, noindex = false, type = "website" } = Astro.props;
+const origin = siteOrigin();
+const canonical = absoluteUrl(origin, path);
+const og: SeoImage = image ?? {
+  url: "/og-default.jpg",
+  width: 1200,
+  height: 630,
+  alt: site.hero.placeholderAlt,
+};
+const ogUrl = absoluteUrl(origin, og.url);
+---
+
+<title>{title}</title>
+<meta name="description" content={description} />
+<link rel="canonical" href={canonical} />
+<meta
+  name="robots"
+  content={noindex ? "noindex,nofollow" : "index,follow,max-image-preview:large,max-snippet:-1"}
+/>
+<meta name="author" content={site.brand} />
+<meta name="theme-color" content="#0A0A0A" />
+<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+
+<meta name="geo.region" content={site.address.regionCode} />
+<meta name="geo.placename" content={site.address.locality} />
+<meta name="geo.position" content={`${site.geo.lat};${site.geo.lng}`} />
+<meta name="ICBM" content={`${site.geo.lat}, ${site.geo.lng}`} />
+
+<meta property="og:type" content={type} />
+<meta property="og:locale" content="hr_HR" />
+<meta property="og:site_name" content={site.brand} />
+<meta property="og:title" content={title} />
+<meta property="og:description" content={description} />
+<meta property="og:url" content={canonical} />
+<meta property="og:image" content={ogUrl} />
+<meta property="og:image:width" content={String(og.width)} />
+<meta property="og:image:height" content={String(og.height)} />
+<meta property="og:image:alt" content={og.alt} />
+<meta name="twitter:card" content="summary_large_image" />

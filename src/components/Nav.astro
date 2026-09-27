@@ -1,0 +1,75 @@
+---
+interface Props {
+  current?: "home" | "radovi" | undefined;
+}
+const { current } = Astro.props;
+---
+
+<header class="nav">
+  <nav aria-label="Glavna navigacija">
+    <a class="nav__brand" href="/" aria-current={current === "home" ? "page" : undefined}>ikdirected</a>
+    <div class="nav__links">
+      <a class="m" href="/radovi" aria-current={current === "radovi" ? "page" : undefined}>Radovi</a>
+      <a class="m" href="#kontakt">Provjerite termin</a>
+    </div>
+  </nav>
+</header>
+
+<style>
+  .nav {
+    position: fixed;
+    inset: 0 0 auto 0;
+    z-index: var(--z-nav);
+    mix-blend-mode: difference;
+    color: var(--fg);
+  }
+  nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--s-4);
+    padding: 14px var(--pad);
+  }
+  a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 32px;
+  }
+  .nav__brand {
+    letter-spacing: 0.34em;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    font-weight: 450;
+  }
+  .nav__links {
+    display: flex;
+    gap: clamp(16px, 3vw, 40px);
+  }
+  .nav__links a {
+    opacity: 0.8;
+    transition: opacity var(--d-1) var(--ease-out);
+  }
+  .nav__links a:hover,
+  .nav__links a[aria-current="page"] {
+    opacity: 1;
+  }
+  .nav__links a[aria-current="page"] {
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 6px;
+  }
+  .nav__links a {
+    white-space: nowrap;
+  }
+  @media (max-width: 420px) {
+    .nav__brand {
+      letter-spacing: 0.2em;
+    }
+    .nav__links {
+      gap: 14px;
+    }
+    .nav__links a {
+      letter-spacing: 0.05em;
+    }
+  }
+</style>
