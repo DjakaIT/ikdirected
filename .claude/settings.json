@@ -1,0 +1,45 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install:*)",
+      "Bash(npm ci)",
+      "Bash(npm run:*)",
+      "Bash(npx astro:*)",
+      "Bash(npx vitest:*)",
+      "Bash(npx playwright:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npx eslint:*)",
+      "Bash(npx prettier:*)",
+      "Bash(npx wrangler d1 migrations create:*)",
+      "Bash(npx wrangler d1 migrations apply ikdirected --local)",
+      "Bash(npx wrangler d1 execute ikdirected --local:*)",
+      "Bash(npx wrangler types:*)",
+      "Bash(node scripts/:*)",
+      "Bash(git status)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git branch:*)",
+      "Bash(git checkout build/atelier-cms)",
+      "Bash(git checkout -b build/atelier-cms)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push -u origin build/atelier-cms)",
+      "Bash(git push origin build/atelier-cms)",
+      "Bash(grep:*)",
+      "Bash(ls:*)",
+      "Bash(tail:*)",
+      "Bash(wc:*)"
+    ],
+    "deny": [
+      "Bash(git push origin main)",
+      "Bash(git push --force:*)",
+      "Bash(git push -f:*)",
+      "Bash(npx wrangler deploy:*)",
+      "Bash(wrangler deploy:*)",
+      "Bash(npx wrangler secret:*)",
+      "Read(./.dev.vars)",
+      "Read(./.env)",
+      "Read(./.env.*)"
+    ]
+  }
+}
