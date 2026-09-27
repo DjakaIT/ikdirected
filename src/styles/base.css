@@ -1,0 +1,124 @@
+*,
+*::before,
+*::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+html {
+  -webkit-text-size-adjust: 100%;
+  color-scheme: dark;
+  background: var(--bg);
+}
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}
+body {
+  background: var(--bg);
+  color: var(--fg-2);
+  font-family: var(--sans);
+  font-weight: 350; /* PD-01 */
+  font-size: var(--t-body);
+  line-height: 1.68;
+  overflow-x: clip;
+  min-height: 100svh;
+}
+h1,
+h2,
+h3,
+h4 {
+  color: var(--fg);
+  text-wrap: balance;
+}
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+a {
+  color: inherit;
+  text-decoration: none;
+}
+button,
+input,
+textarea,
+select {
+  font: inherit;
+  color: inherit;
+}
+button {
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+/* PD-13 focus ring */
+:focus-visible {
+  outline: 2px solid var(--fg);
+  outline-offset: 4px;
+}
+.focus-inset:focus-visible,
+.focus-inset :focus-visible {
+  outline-offset: -6px;
+}
+
+.sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.skip {
+  position: absolute;
+  left: var(--pad);
+  top: -80px;
+  z-index: calc(var(--z-load) + 1);
+  background: var(--fg);
+  color: var(--bg);
+  padding: 12px 18px;
+  transition: top var(--d-1) var(--ease-out);
+}
+.skip:focus {
+  top: 14px;
+}
+
+/* PD-02 mono label */
+.m {
+  font-family: var(--mono);
+  font-size: var(--t-meta);
+  font-weight: 400;
+  letter-spacing: var(--track-caps);
+  text-transform: uppercase;
+  line-height: 1.5;
+}
+.dim {
+  color: var(--dim);
+}
+.num {
+  font-variant-numeric: tabular-nums; /* PD-03 */
+}
+
+/* PD-11 grain */
+.grain {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-grain);
+  pointer-events: none;
+  opacity: 0.045;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='260'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.82' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

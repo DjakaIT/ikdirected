@@ -1,0 +1,60 @@
+:root {
+  /* colour — monochrome, photos supply the colour */
+  --bg: #0a0a0a;
+  --bg-2: #131313;
+  --bg-3: #1b1b1b;
+  --fg: #f2f0ed;
+  --fg-2: rgba(242, 240, 237, 0.74); /* body copy on dark ≈ 10:1 */
+  --dim: rgba(242, 240, 237, 0.56); /* meta ≥ 12px only ≈ 5.9:1 */
+  --line: rgba(242, 240, 237, 0.14);
+  --line-2: rgba(242, 240, 237, 0.28);
+  --scrim: rgba(8, 8, 8, 0.96);
+  --ok: #8fd6a0; /* admin only; ≥ 7:1 on --bg */
+  --danger: #ff7a6b; /* admin only; ≥ 7:1 on --bg */
+
+  /* type */
+  --sans: var(--font-archivo, "Archivo"), system-ui, sans-serif; /* variable: wght 300–800, wdth 75–125 */
+  --mono: var(--font-space-mono, "Space Mono"), ui-monospace, monospace;
+  --t-meta: 0.75rem; /* 12px floor — never smaller */
+  --t-body: clamp(1rem, 0.95vw + 0.4rem, 1.125rem);
+  --t-lead: clamp(1.15rem, 1.4vw + 0.5rem, 1.5rem);
+  --t-h3: clamp(1.5rem, 2.6vw, 2.5rem);
+  --t-h2: clamp(1.8rem, 4.4vw, 3.4rem);
+  --t-display: clamp(3rem, 12.6vw, 13rem);
+  --track-caps: 0.12em;
+  --track-display: -0.045em;
+
+  /* space — 4-based */
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 24px;
+  --s-6: 32px;
+  --s-7: 48px;
+  --s-8: 64px;
+  --s-9: 96px;
+  --s-10: 128px;
+  --s-11: 192px;
+  --pad: clamp(18px, 3.4vw, 54px);
+  --section: clamp(96px, 14vw, 192px);
+
+  /* motion */
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-io: cubic-bezier(0.76, 0, 0.24, 1);
+  --d-1: 180ms;
+  --d-2: 320ms;
+  --d-3: 600ms;
+  --d-4: 1200ms;
+
+  /* shape — the site is square. radius only for the cursor dot and round icon buttons */
+  --r-0: 0;
+  --r-round: 999px;
+
+  --z-nav: 60;
+  --z-grain: 70;
+  --z-cursor: 90;
+  --z-lb: 95;
+  --z-toast: 98;
+  --z-load: 100;
+}
