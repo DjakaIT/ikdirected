@@ -1,0 +1,5 @@
+SITE_ORIGIN=http://localhost:4321
+PUBLIC_MEDIA_BASE=/_dev/media
+DEV_AUTH_BYPASS=1
+DEV_AUTH_EMAIL=dev@example.test
+ADMIN_EMAILS=dev@example.test

@@ -1,0 +1,28 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "ikdirected",
+  "main": "@astrojs/cloudflare/entrypoints/server",
+  "compatibility_date": "2026-08-20",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": { "binding": "ASSETS", "directory": "./dist" },
+  // Security: the *.workers.dev hostname and preview URLs would bypass Cloudflare Access (SECURITY T1).
+  "workers_dev": false,
+  "preview_urls": false,
+  "observability": { "enabled": true },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "ikdirected",
+      "database_id": "REPLACE_ME",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "r2_buckets": [{ "binding": "MEDIA", "bucket_name": "ikdirected-media" }],
+  "vars": {
+    "SITE_ORIGIN": "https://ikdirected.com", // TODO(client) real domain
+    "PUBLIC_MEDIA_BASE": "https://media.ikdirected.com",
+    "CF_ACCESS_TEAM_DOMAIN": "https://REPLACE_ME.cloudflareaccess.com",
+    "CF_ACCESS_AUD": "REPLACE_ME",
+    "ADMIN_EMAILS": "REPLACE_ME" // comma separated
+  }
+}
