@@ -1,0 +1,58 @@
+---
+import Public from "../layouts/Public.astro";
+---
+
+<Public
+  title="Stranica ne postoji | ikdirected"
+  description="Ova stranica ne postoji ili je premještena."
+  path="/404"
+  noindex
+>
+  <section class="nf" aria-labelledby="nf-title">
+    <h1 id="nf-title" class="nf__code num">404</h1>
+    <p class="nf__text">Ova stranica ne postoji ili je premještena.</p>
+    <p class="nf__links m">
+      <a href="/">Naslovnica</a>
+      <span aria-hidden="true">·</span>
+      <a href="/radovi">Svi radovi</a>
+    </p>
+  </section>
+</Public>
+
+<style>
+  .nf {
+    min-height: 100svh;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding: var(--s-10) var(--pad) var(--s-8);
+    border-bottom: 1px solid var(--line);
+  }
+  .nf__code {
+    font-size: var(--t-display);
+    line-height: 0.84;
+    font-weight: 600;
+    font-stretch: 112%;
+    letter-spacing: var(--track-display);
+  }
+  .nf__text {
+    margin-top: var(--s-6);
+    max-width: 34ch;
+    font-size: var(--t-lead);
+  }
+  .nf__links {
+    display: flex;
+    align-items: center;
+    gap: var(--s-4);
+    margin-top: var(--s-6);
+    color: var(--fg);
+  }
+  .nf__links a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    text-decoration: underline;
+    text-underline-offset: 6px;
+    text-decoration-thickness: 1px;
+  }
+</style>
