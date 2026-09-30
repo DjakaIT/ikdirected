@@ -3,7 +3,7 @@
 Read first every session. Update last every task. Keep under ~120 lines — summaries only.
 
 ## Status
-Current phase: **FE3 — Archive, category, album (mock data)**
+Current phase: **FE4 — Admin UI with simulated API**
 Branch: `build/atelier-cms`
 Order (Daniel, 2026-09-27): **front-end first with dummy data + simulated API, backend after.**
 FE1 → FE2 → FE3 → FE4, then P0.3/P0.4 remainder → P2 → P3 wiring → P4 → P5 → P6 wiring → P7.
@@ -30,8 +30,16 @@ backend swap touches only `src/lib/data/*`.
 - [x] P1.5 hero, say, services (links to categories), area+marquee, FAQ, loader, JSON-LD, hero preload
 - [x] P1.6 pinned lerp track + counter, native-scroll fallback, dialog lightbox (swipe), cursor dot
       Verified side by side with reference screenshots; gate green (27 unit/int, 63 e2e). JS 2.8 KB gz.
-## FE3 — Archive, category, album with mock data (P2.2 dates/slug, P2.5 rhythm, P3.3–P3.5)  [next]
-## FE4 — Admin UI with simulated API (P6.1–P6.7, pipeline real, upload simulated)
+## FE3 — Archive, category, album, SEO (mock data)  [done]
+- [x] P2.2 (part) dates.ts + plural.ts; slug.ts moves to backend (server-side only)
+- [x] P2.5 rhythm.ts (+ tests); single tall/square rows capped at ~90svh inside their 3/11 column
+- [x] P3.3 /radovi: chip bar (links), year groups, 4:5 cards + hover 2nd photo, search + live region,
+      "Učitaj još" (DOM adoption of server HTML, replaceState), ?stranica validation → 404
+- [x] P3.4 /radovi/[seg]: category view | album | identical 404 (SEC-ENUM-01)
+- [x] P3.5 album: 88svh hero, breadcrumbs, meta sentence, story, rhythm rows, lightbox, prev/next, CTA
+- [x] P3.6 JSON-LD (home, collection, gallery, breadcrumbs), sitemap.xml, robots.txt, /privatnost
+      Gate green: 37 unit/int, 141 e2e (3 projects), axe clean on 6 public routes.
+## FE4 — Admin UI with simulated API (P6.1–P6.7, pipeline real, upload simulated)  [next]
 
 ## Installed versions
 P0: astro 6.4.8 · @astrojs/cloudflare 13.7.0 · @astrojs/preact 5.1.5 · preact 10.29.8 ·
@@ -60,6 +68,13 @@ FE2: sharp 0.35.5
 - 2026-09-30 --t-body token (16–18px) kept over reference 14px body (DESIGN §2 tokens win).
 - 2026-09-30 Budgets spec (JS/CSS transfer) needs a production preview; measured manually now,
   automated in P7.3. Dev toolbar disabled.
+- 2026-09-30 Album CTA links to #kontakt (contact footer is on every page) instead of /#kontakt.
+- 2026-09-30 Footer end row: "Svi radovi · Privatnost" (privacy page needs a link); copy in site.ts TODO(client).
+- 2026-09-30 Workers runtime types merge an HTMLRewriter `Element.append` into DOM typings →
+  client code uses appendChild. Revisit if wrangler types gain a DOM-safe mode.
+- 2026-09-30 Playwright + JS disabled + cross-document view transition: click stalls mid-transition
+  (browser click itself works). No-JS link test runs with reducedMotion to isolate behaviour.
+- 2026-09-30 AC-ARC-06 (empty category) untestable with mock data — covered after seed in P3 wiring.
 
 ## Blockers
 (none)
@@ -70,4 +85,4 @@ FE2: sharp 0.35.5
 - Cloudflare setup (docs/SETUP.md) before first deploy
 
 ## Next session starts at
-FE3 — `src/lib/text/dates.ts`, `src/lib/layout/rhythm.ts`, then `src/pages/radovi/index.astro` (DESIGN §5.2).
+FE4 — P6.1 admin shell: `src/layouts/Admin.astro`, `src/styles/admin.css`, Toast/Dialog, mock `src/admin/api.ts`.
