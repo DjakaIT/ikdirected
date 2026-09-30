@@ -3,7 +3,7 @@
 Read first every session. Update last every task. Keep under ~120 lines — summaries only.
 
 ## Status
-Current phase: **FE4 — Admin UI with simulated API**
+Current phase: **Backend — front-end complete (FE1–FE4); next P0.3 remainder → P2**
 Branch: `build/atelier-cms`
 Order (Daniel, 2026-09-27): **front-end first with dummy data + simulated API, backend after.**
 FE1 → FE2 → FE3 → FE4, then P0.3/P0.4 remainder → P2 → P3 wiring → P4 → P5 → P6 wiring → P7.
@@ -39,7 +39,19 @@ backend swap touches only `src/lib/data/*`.
 - [x] P3.5 album: 88svh hero, breadcrumbs, meta sentence, story, rhythm rows, lightbox, prev/next, CTA
 - [x] P3.6 JSON-LD (home, collection, gallery, breadcrumbs), sitemap.xml, robots.txt, /privatnost
       Gate green: 37 unit/int, 141 e2e (3 projects), axe clean on 6 public routes.
-## FE4 — Admin UI with simulated API (P6.1–P6.7, pipeline real, upload simulated)  [next]
+## FE4 — Admin UI with simulated API (P6.1–P6.7)  [done]
+- [x] P6.1 Admin layout/top bar (email + Odjava, noindex), admin.css, Toast, Dialog, api.ts + typed errors
+      → Croatian copy; in-browser API simulation src/admin/mock/server.ts (localStorage, latency)
+- [x] P6.2 Albumi: 4/3/2 grid, pills, chips (Sve/4 kategorije/Skice), Novi album, trash + Vrati, empty state
+- [x] P6.3 editor: autosave 800 ms + abort, save states + retry, publish switch + reasons, delete dialog
+- [x] P6.4 image pipeline REAL (worker, EXIF orientation, 3× WebP under caps, LQIP, WASM fallback)
+- [x] P6.5 upload queue (process 1 / upload 3, progress, "Prenosim i / n", retry one, beforeunload)
+- [x] P6.6 photo grid: sortablejs drag + ⋯ menu (keyboard), cover, ★ homepage, alt, undo delete
+- [x] P6.7 Naslovnica strip, n / 12, ←/→ + drag, Makni, empty state
+      Gate green: 43 unit/int, 222 e2e (3 projects), axe clean on 9 routes incl. admin.
+## Backend  [next] — P0.3 rest, P0.4, P2.1/2.3/2.4/2.6/2.7, P3.1 dev media + P3.2–3.7 wiring (swap
+   src/lib/data/public.ts to D1), P4, P5 (handlers in src/lib/api), P6 wiring (api.ts → fetch/XHR,
+   delete src/admin/mock + test hooks, privacy test via /_dev/media), P7.
 
 ## Installed versions
 P0: astro 6.4.8 · @astrojs/cloudflare 13.7.0 · @astrojs/preact 5.1.5 · preact 10.29.8 ·
@@ -47,6 +59,7 @@ P0: astro 6.4.8 · @astrojs/cloudflare 13.7.0 · @astrojs/preact 5.1.5 · preact
   @cloudflare/vitest-pool-workers 0.22.0 · node 24.13.0 / npm 11.6.2
 FE1: @playwright/test 1.63.0 · @axe-core/playwright 4.13.0 · @types/node 22.20.4
 FE2: sharp 0.35.5
+FE4: @preact/signals 2.11.2 · sortablejs 1.15.7 · @jsquash/webp 1.5.0
 
 ## Decisions
 - 2026-09-27 Stack fixed per docs/RESEARCH.md (Astro 6 + Workers + D1 + R2 + Access).
@@ -75,6 +88,15 @@ FE2: sharp 0.35.5
 - 2026-09-30 Playwright + JS disabled + cross-document view transition: click stalls mid-transition
   (browser click itself works). No-JS link test runs with reducedMotion to isolate behaviour.
 - 2026-09-30 AC-ARC-06 (empty category) untestable with mock data — covered after seed in P3 wiring.
+- 2026-10-01 Admin API simulated in the browser (src/admin/mock, localStorage key ik-admin-mock-v1);
+  admin edits do not reach the public mock. Test hooks: localStorage "ik-mock-fail", window.__ikLastUpload (dev).
+- 2026-10-01 Contract addition: Photo responses carry `thumb` (640 URL built server-side).
+- 2026-10-01 Copy not in DESIGN §9, kept minimal: alt dialog "Spremi"; aria names (Administracija, Filtar,
+  Izbornik fotografije N, Radnje s fotografijom, Kategorije, Putanja, Druge priče). Delete dialog uses
+  accusative "fotografiju/fotografije/fotografija".
+- 2026-10-01 sortablejs typed via local src/admin/sortablejs.d.ts (no @types dep). Vite optimizeDeps
+  pre-declared (stale-deps 500s in workerd otherwise); worker format es (WASM lazy import).
+- 2026-10-01 make-fixtures: placeholders rebuilt only with --force (WebP bytes not stable across runs).
 
 ## Blockers
 (none)
@@ -85,4 +107,4 @@ FE2: sharp 0.35.5
 - Cloudflare setup (docs/SETUP.md) before first deploy
 
 ## Next session starts at
-FE4 — P6.1 admin shell: `src/layouts/Admin.astro`, `src/styles/admin.css`, Toast/Dialog, mock `src/admin/api.ts`.
+Backend — P0.3 remainder (eslint + prettier, noUncheckedIndexedAccess), then P2.1 `migrations/0001_init.sql`.
