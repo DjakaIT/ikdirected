@@ -1,0 +1,54 @@
+---
+// PD-04: an extra follower dot for fine pointers only. The native cursor is never hidden.
+---
+
+<div class="cur" aria-hidden="true" data-cursor><span>Otvori</span></div>
+
+<script>
+  import { initCursor } from "../../scripts/public/cursor";
+  initCursor();
+</script>
+
+<style>
+  .cur {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: var(--z-cursor);
+    width: 12px;
+    height: 12px;
+    border-radius: var(--r-round);
+    background: var(--fg);
+    pointer-events: none;
+    place-items: center;
+    mix-blend-mode: difference;
+    transition:
+      width 0.35s var(--ease-out),
+      height 0.35s var(--ease-out);
+  }
+  :global(html.has-cur) .cur {
+    display: grid;
+  }
+  span {
+    font-family: var(--mono);
+    font-size: var(--t-meta);
+    letter-spacing: var(--track-caps);
+    text-transform: uppercase;
+    color: #000;
+    opacity: 0;
+    transition: opacity 0.25s;
+  }
+  .cur.big {
+    width: 82px;
+    height: 82px;
+  }
+  .cur.big span {
+    opacity: 1;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .cur {
+      display: none !important;
+    }
+  }
+</style>

@@ -1,0 +1,116 @@
+---
+// Shared lightbox (AC-LB-01/02, PD-15). A native modal <dialog>: focus is trapped and the page
+// behind is inert while open. Items come from links with data-lb-* inside a [data-lb-group].
+---
+
+<dialog class="lb" aria-label="Prikaz fotografije" aria-modal="true" data-lightbox>
+  <div class="lb__top">
+    <span class="m num" data-lb-idx></span>
+    <button class="m lb__close" type="button" data-lb-close>Zatvori ✕</button>
+  </div>
+  <div class="lb__stage" data-lb-stage>
+    <img data-lb-img alt="" />
+  </div>
+  <div class="lb__bot">
+    <p class="m dim lb__cap" data-lb-cap></p>
+    <a class="m lb__album" href="/radovi" data-lb-album hidden>Otvori album →</a>
+    <div class="lb__nav">
+      <button type="button" aria-label="Prethodna fotografija" data-lb-prev>←</button>
+      <button type="button" aria-label="Sljedeća fotografija" data-lb-next>→</button>
+    </div>
+  </div>
+</dialog>
+
+<script>
+  import { initLightbox } from "../scripts/public/lightbox";
+  initLightbox();
+</script>
+
+<style>
+  .lb {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    max-width: none;
+    max-height: none;
+    margin: 0;
+    border: 0;
+    background: var(--scrim);
+    color: var(--fg);
+    padding: 16px var(--pad) 20px;
+    grid-template-rows: auto 1fr auto;
+    opacity: 0;
+    transition:
+      opacity 0.4s ease,
+      display 0.4s allow-discrete,
+      overlay 0.4s allow-discrete;
+  }
+  .lb[open] {
+    display: grid;
+    opacity: 1;
+  }
+  @starting-style {
+    .lb[open] {
+      opacity: 0;
+    }
+  }
+  .lb::backdrop {
+    background: transparent;
+  }
+  .lb__top,
+  .lb__bot {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px;
+    flex-wrap: wrap;
+  }
+  .lb__close {
+    min-height: 44px;
+    padding-inline: var(--s-2);
+    margin-right: calc(var(--s-2) * -1);
+  }
+  .lb__stage {
+    position: relative;
+    min-height: 0;
+    touch-action: pan-y;
+  }
+  .lb__stage img {
+    position: absolute;
+    inset: 14px 0;
+    width: 100%;
+    height: calc(100% - 28px);
+    object-fit: contain;
+  }
+  .lb__cap {
+    flex: 1 1 16ch;
+  }
+  .lb__album {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    text-decoration: underline;
+    text-underline-offset: 6px;
+    text-decoration-thickness: 1px;
+  }
+  .lb__nav {
+    display: flex;
+    gap: var(--s-2);
+  }
+  .lb__nav button {
+    border: 1px solid var(--line);
+    width: 46px;
+    height: 46px;
+    border-radius: var(--r-round);
+    transition:
+      background var(--d-2),
+      color var(--d-2),
+      border-color var(--d-2);
+  }
+  .lb__nav button:hover {
+    background: var(--fg);
+    color: var(--bg);
+    border-color: var(--fg);
+  }
+</style>
