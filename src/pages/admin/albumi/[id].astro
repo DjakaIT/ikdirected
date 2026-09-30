@@ -1,0 +1,14 @@
+---
+import Admin from "../../../layouts/Admin.astro";
+import AlbumEditor from "../../../admin/AlbumEditor.tsx";
+
+const id = Astro.params.id ?? "";
+// Ids are UUID v4 (ARCHITECTURE §6); anything else is not an album.
+if (!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(id)) {
+  return new Response(null, { status: 404 });
+}
+---
+
+<Admin title="Album" current="albumi">
+  <AlbumEditor client:load id={id} />
+</Admin>
