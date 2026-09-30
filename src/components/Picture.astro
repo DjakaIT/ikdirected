@@ -16,6 +16,8 @@ interface Props {
   appear?: boolean;
   /** Fallback `src` for browsers without srcset support. */
   fallback?: Variant;
+  /** Purely decorative duplicate (e.g. hover photo): empty alt, hidden from assistive tech. */
+  decorative?: boolean;
   class?: string;
 }
 
@@ -27,19 +29,24 @@ const {
   fit = "natural",
   appear = true,
   fallback = 1280,
+  decorative = false,
   class: className,
 } = Astro.props;
 const base = photo.base ?? mediaBase();
 ---
 
-<div class:list={["pic", `pic--${fit}`, className]} data-pic={appear ? "" : undefined}>
+<div
+  class:list={["pic", `pic--${fit}`, className]}
+  data-pic={appear ? "" : undefined}
+  aria-hidden={decorative ? "true" : undefined}
+>
   <img class="pic__lqip" src={photo.lqip} alt="" aria-hidden="true" width={photo.width} height={photo.height} />
   <img
     class="pic__img"
     src={mediaUrl(base, photo.mediaId, fallback)}
     srcset={srcset(base, photo)}
     sizes={sizes}
-    alt={photo.alt}
+    alt={decorative ? "" : photo.alt}
     width={photo.width}
     height={photo.height}
     loading={loading}

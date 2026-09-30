@@ -65,6 +65,8 @@ export interface ArchivePageData {
   page: number;
   totalPages: number;
   total: number;
+  /** Year span of the whole listing (not just this page), null when empty. */
+  years: { from: number; to: number } | null;
 }
 
 export interface Neighbours {

@@ -1,0 +1,63 @@
+---
+// One year of the archive (DESIGN §5.2): an outlined numeral sits behind the first row,
+// overlapping it by 30 %. The real heading is visually hidden; the numeral is decoration.
+import AlbumCard from "./AlbumCard.astro";
+import type { AlbumCardData } from "../../lib/data/types";
+
+interface Props {
+  year: number;
+  albums: AlbumCardData[];
+  eagerFirst?: number;
+}
+
+const { year, albums, eagerFirst = 0 } = Astro.props;
+---
+
+<section class="yr" data-year={year} aria-labelledby={`y-${year}`}>
+  <h2 class="sr" id={`y-${year}`}>{year}.</h2>
+  <span class="yr__num num" aria-hidden="true">{year}</span>
+  <ul class="yr__grid" role="list" data-grid>
+    {albums.map((a, i) => <AlbumCard album={a} eager={i < eagerFirst} />)}
+  </ul>
+</section>
+
+<style>
+  .yr {
+    position: relative;
+    padding-top: var(--s-8);
+  }
+  .yr__num {
+    position: relative;
+    z-index: 0;
+    display: block;
+    font-size: clamp(6rem, 16vw, 14rem);
+    font-weight: 600;
+    font-stretch: 112%;
+    letter-spacing: var(--track-display);
+    line-height: 0.8;
+    color: transparent;
+    -webkit-text-stroke: 1px var(--line-2);
+    user-select: none;
+    margin-bottom: -0.24em; /* overlaps the first row by ~30 % of its cap height */
+  }
+  .yr__grid {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--s-7) var(--s-6);
+  }
+  @media (min-width: 640px) {
+    .yr__grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+  @media (min-width: 1100px) {
+    .yr__grid {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+  .yr[hidden] {
+    display: none;
+  }
+</style>

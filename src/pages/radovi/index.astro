@@ -1,0 +1,33 @@
+---
+import Public from "../../layouts/Public.astro";
+import JsonLd from "../../components/JsonLd.astro";
+import ArchiveView from "../../components/archive/ArchiveView.astro";
+import { site } from "../../content/site";
+import { getCategoryCounts, listAlbums } from "../../lib/data/public";
+import { siteOrigin } from "../../lib/env";
+import { parsePageParam } from "../../lib/http/page-param";
+import { collectionGraph } from "../../lib/seo/jsonld";
+
+const page = parsePageParam(Astro.url);
+if (page === null) return new Response(null, { status: 404 });
+const data = await listAlbums({ page });
+if (!data) return new Response(null, { status: 404 });
+const counts = await getCategoryCounts();
+
+const path = page === 1 ? "/radovi" : `/radovi?stranica=${page}`;
+const title = page === 1 ? site.seo.archiveTitle : `${site.seo.archiveTitle} — stranica ${page}`;
+const graph = collectionGraph(
+  siteOrigin(),
+  { path, name: "Radovi", description: site.seo.archiveDescription },
+  [
+    { name: "Naslovnica", path: "/" },
+    { name: "Radovi", path: "/radovi" },
+  ],
+  data.albums,
+);
+---
+
+<Public title={title} description={site.seo.archiveDescription} path={path}>
+  <JsonLd slot="head" data={graph} />
+  <ArchiveView title="Radovi" counts={counts} active="all" data={data} basePath="/radovi" />
+</Public>

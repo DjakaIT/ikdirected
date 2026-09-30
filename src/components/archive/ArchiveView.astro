@@ -1,0 +1,147 @@
+---
+// Shared by /radovi and /radovi/{kategorija} (AC-CAT-01: same component, pre-filtered).
+import ChipBar from "./ChipBar.astro";
+import YearGroup from "./YearGroup.astro";
+import type { CategorySlug } from "../../content/site";
+import type { ArchivePageData, CategoryCounts } from "../../lib/data/types";
+import { countStories } from "../../lib/text/plural";
+import { yearOf } from "../../lib/text/dates";
+
+interface Props {
+  title: string;
+  intro?: string | undefined;
+  counts: CategoryCounts;
+  active: CategorySlug | "all";
+  data: ArchivePageData;
+  /** Path the pagination links build on, e.g. "/radovi" or "/radovi/vjencanja". */
+  basePath: string;
+}
+
+const { title, intro, counts, active, data, basePath } = Astro.props;
+
+// Consecutive albums of the same year form one group (list is newest first).
+const groups: Array<{ year: number; albums: typeof data.albums }> = [];
+for (const album of data.albums) {
+  const year = yearOf(album.eventDate);
+  const last = groups[groups.length - 1];
+  if (last && last.year === year) last.albums.push(album);
+  else groups.push({ year, albums: [album] });
+}
+const span = data.years ? (data.years.from === data.years.to ? `${data.years.from}.` : `${data.years.from}. — ${data.years.to}.`) : "";
+const nextHref = data.page < data.totalPages ? `${basePath}?stranica=${data.page + 1}` : null;
+---
+
+<section class="arc__head" aria-labelledby="arc-title">
+  <h1 id="arc-title">{title}</h1>
+  {intro && <p class="arc__intro">{intro}</p>}
+  {data.total > 0 && <p class="arc__meta m num">{countStories(data.total)}{span && ` · ${span}`}</p>}
+</section>
+
+<ChipBar counts={counts} active={active} />
+
+<div
+  class="arc__body"
+  data-archive
+  data-page={data.page}
+  data-pages={data.totalPages}
+>
+  {
+    data.total === 0 ? (
+      <div class="arc__empty">
+        <p>U ovoj kategoriji još nema objavljenih priča.</p>
+        <a href="/radovi">Pogledaj sve radove →</a>
+      </div>
+    ) : (
+      <div data-groups>
+        {groups.map((g, gi) => (
+          <YearGroup year={g.year} albums={g.albums} eagerFirst={gi === 0 && data.page === 1 ? 3 : 0} />
+        ))}
+      </div>
+    )
+  }
+  <p class="arc__none" data-none hidden>Nema priča za ovaj pojam.</p>
+  <p class="sr" aria-live="polite" data-found></p>
+  {
+    nextHref && (
+      <div class="arc__more">
+        <a class="arc__btn m" href={nextHref} data-more>
+          Učitaj još
+        </a>
+      </div>
+    )
+  }
+</div>
+
+<script>
+  import { initArchive } from "../../scripts/public/archive";
+  initArchive();
+</script>
+
+<style>
+  .arc__head {
+    padding: clamp(120px, 18vh, 200px) var(--pad) var(--s-7);
+  }
+  h1 {
+    font-size: clamp(3rem, 11vw, 10rem);
+    line-height: 0.86;
+    font-weight: 700;
+    font-stretch: 118%;
+    letter-spacing: var(--track-display);
+    text-transform: uppercase;
+  }
+  .arc__intro {
+    max-width: 62ch;
+    margin-top: var(--s-6);
+    font-size: clamp(1rem, 1.4vw, 1.2rem);
+    color: var(--fg-2);
+  }
+  .arc__meta {
+    margin-top: var(--s-5);
+    color: var(--dim);
+  }
+  .arc__body {
+    padding: 0 var(--pad) var(--section);
+  }
+  .arc__empty,
+  .arc__none {
+    padding-top: var(--s-8);
+    font-size: var(--t-lead);
+    color: var(--fg);
+  }
+  .arc__empty a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    margin-top: var(--s-3);
+    font-size: var(--t-body);
+    border-bottom: 1px solid var(--line-2);
+  }
+  .arc__none[hidden] {
+    display: none;
+  }
+  .arc__more {
+    display: flex;
+    justify-content: center;
+    padding-top: var(--s-9);
+  }
+  .arc__btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 48px;
+    padding: 14px 28px;
+    border: 1px solid var(--line-2);
+    color: var(--fg);
+    transition:
+      border-color var(--d-1) var(--ease-out),
+      background var(--d-1) var(--ease-out),
+      color var(--d-1) var(--ease-out);
+  }
+  .arc__btn:hover {
+    border-color: var(--fg);
+  }
+  .arc__btn[aria-busy="true"] {
+    opacity: 0.6;
+    pointer-events: none;
+  }
+</style>

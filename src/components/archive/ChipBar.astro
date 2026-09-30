@@ -1,0 +1,154 @@
+---
+// Sticky filter bar (DESIGN §5.2, AC-ARC-02): chips are real links so filtering works without JS.
+// The search field is progressive enhancement (AC-ARC-04) and stays hidden until JS reveals it.
+import { site, type CategorySlug } from "../../content/site";
+import type { CategoryCounts } from "../../lib/data/types";
+
+interface Props {
+  counts: CategoryCounts;
+  active: CategorySlug | "all";
+}
+
+const { counts, active } = Astro.props;
+const chips = [
+  { href: "/radovi", label: "Sve", count: counts.all, key: "all" as const },
+  ...site.categories.map((c) => ({ href: `/radovi/${c.slug}`, label: c.name, count: counts.bySlug[c.slug], key: c.slug })),
+];
+---
+
+<div class="bar">
+  <nav class="bar__chips" aria-label="Kategorije">
+    <ul role="list">
+      {
+        chips.map((c) => (
+          <li>
+            <a href={c.href} aria-current={c.key === active ? "page" : undefined}>
+              {c.label} <span class="num">{c.count}</span>
+            </a>
+          </li>
+        ))
+      }
+    </ul>
+  </nav>
+  <div class="bar__search" data-search-wrap hidden>
+    <label class="sr" for="arc-q">Traži po mjestu ili nazivu</label>
+    <span class="bar__glyph" aria-hidden="true">⌕</span>
+    <input
+      id="arc-q"
+      type="search"
+      class="m"
+      placeholder="Traži po mjestu ili nazivu"
+      autocomplete="off"
+      spellcheck="false"
+      data-search
+    />
+  </div>
+</div>
+
+<style>
+  .bar {
+    position: sticky;
+    top: 58px;
+    z-index: calc(var(--z-nav) - 1);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--s-3) var(--s-6);
+    flex-wrap: wrap;
+    padding: var(--s-3) var(--pad);
+    background: rgba(10, 10, 10, 0.86);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--line);
+  }
+  .bar__chips {
+    min-width: 0;
+    flex: 1 1 auto;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .bar__chips::-webkit-scrollbar {
+    display: none;
+  }
+  ul {
+    display: flex;
+    align-items: center;
+    list-style: none;
+    width: max-content;
+  }
+  li + li {
+    border-left: 1px solid var(--line-2);
+  }
+  a {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45em;
+    min-height: 44px;
+    padding: 0 var(--s-4);
+    color: var(--dim);
+    font-size: 0.95rem;
+    white-space: nowrap;
+    transition: color var(--d-1) var(--ease-out);
+  }
+  li:first-child a {
+    padding-left: 0;
+  }
+  a:hover {
+    color: var(--fg);
+  }
+  a[aria-current="page"] {
+    color: var(--fg);
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 6px;
+  }
+  .num {
+    font-family: var(--mono);
+    font-size: var(--t-meta);
+  }
+  .bar__search {
+    display: flex;
+    align-items: center;
+    gap: var(--s-2);
+    flex: 0 1 360px;
+    border-bottom: 1px solid var(--line-2);
+    transition: border-color var(--d-1) var(--ease-out);
+  }
+  .bar__search[hidden] {
+    display: none;
+  }
+  .bar__search:focus-within {
+    border-color: var(--fg);
+  }
+  .bar__glyph {
+    color: var(--dim);
+    font-size: 1.1rem;
+  }
+  input {
+    flex: 1;
+    min-width: 0;
+    min-height: 40px;
+    background: none;
+    border: 0;
+    color: var(--fg);
+    font-size: max(16px, var(--t-meta)); /* 16px prevents iOS zoom */
+    text-transform: none;
+    letter-spacing: 0.04em;
+  }
+  input::placeholder {
+    color: var(--dim);
+  }
+  input:focus-visible {
+    outline: none;
+  }
+  @media (max-width: 639px) {
+    .bar__chips {
+      flex-basis: 100%;
+      mask-image: linear-gradient(90deg, #000 85%, transparent);
+      -webkit-mask-image: linear-gradient(90deg, #000 85%, transparent);
+    }
+    .bar__search {
+      flex-basis: 100%;
+    }
+  }
+</style>

@@ -2,7 +2,7 @@ import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 
 // AC-A11Y-01: 0 serious/critical violations on every public route (admin routes join in FE4).
-const ROUTES = ["/", "/stranica-koja-ne-postoji"];
+const ROUTES = ["/", "/radovi", "/radovi/vjencanja", "/radovi/testni-album-1", "/privatnost", "/stranica-koja-ne-postoji"];
 
 for (const route of ROUTES) {
   test(`AC-A11Y-01 axe has no serious or critical violations on ${route}`, async ({ page }) => {

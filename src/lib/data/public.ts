@@ -114,7 +114,14 @@ export async function listAlbums(opts: { category?: CategorySlug | undefined; pa
   const totalPages = Math.max(1, Math.ceil(all.length / PER_PAGE));
   if (!Number.isInteger(opts.page) || opts.page < 1 || opts.page > totalPages) return null;
   const start = (opts.page - 1) * PER_PAGE;
-  return { albums: all.slice(start, start + PER_PAGE), page: opts.page, totalPages, total: all.length };
+  const years = all.map((a) => Number(a.eventDate.slice(0, 4)));
+  return {
+    albums: all.slice(start, start + PER_PAGE),
+    page: opts.page,
+    totalPages,
+    total: all.length,
+    years: years.length ? { from: Math.min(...years), to: Math.max(...years) } : null,
+  };
 }
 
 export async function getAlbumBySlug(slug: string): Promise<AlbumPageData | null> {

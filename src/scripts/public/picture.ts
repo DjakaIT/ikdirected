@@ -4,7 +4,7 @@ function reveal(pic: Element): void {
   pic.classList.add("is-loaded");
 }
 
-export function initPictures(root: ParentNode): void {
+export function initPictures(root: Pick<ParentNode, "querySelectorAll">): void {
   for (const pic of root.querySelectorAll(".pic:not(.is-loaded)")) {
     const img = pic.querySelector<HTMLImageElement>(".pic__img");
     if (!img) continue;
