@@ -1,0 +1,14 @@
+/* PD-09: native cross-document view transitions on public pages; off under reduced motion. */
+@media (prefers-reduced-motion: no-preference) {
+  @view-transition {
+    navigation: auto;
+  }
+}
+::view-transition-group(album-hero) {
+  animation-duration: 450ms;
+  animation-timing-function: var(--ease-io);
+}
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 250ms;
+}

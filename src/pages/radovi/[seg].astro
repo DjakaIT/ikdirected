@@ -1,0 +1,101 @@
+---
+// One segment, two meanings (ARCHITECTURE §2): a category slug renders the filtered archive,
+// anything else is looked up as a published album slug. Unknown, draft and deleted all get the
+// same 404 page (AC-ALB-05, SEC-ENUM-01) — slugs never equal a category (reserved words).
+import type { ComponentProps } from "astro/types";
+import Public from "../../layouts/Public.astro";
+import JsonLd from "../../components/JsonLd.astro";
+import Lightbox from "../../components/Lightbox.astro";
+import ArchiveView from "../../components/archive/ArchiveView.astro";
+import AlbumView from "../../components/album/AlbumView.astro";
+import { categoryBySlug, site } from "../../content/site";
+import { getAlbumBySlug, getCategoryCounts, getNeighbours, listAlbums, mediaBase } from "../../lib/data/public";
+import { siteOrigin } from "../../lib/env";
+import { parsePageParam } from "../../lib/http/page-param";
+import { mediaUrl } from "../../lib/media/srcset";
+import { albumGraph, collectionGraph } from "../../lib/seo/jsonld";
+import { monthYear } from "../../lib/text/dates";
+import { countPhotos } from "../../lib/text/plural";
+
+const seg = Astro.params.seg ?? "";
+const origin = siteOrigin();
+const category = categoryBySlug(seg);
+
+let view:
+  | { kind: "category"; props: ComponentProps<typeof ArchiveView> }
+  | { kind: "album"; props: ComponentProps<typeof AlbumView> };
+let head: { title: string; description: string; path: string; graph: unknown; image?: { url: string; width: number; height: number; alt: string } };
+
+if (category) {
+  const page = parsePageParam(Astro.url);
+  if (page === null) return new Response(null, { status: 404 });
+  const data = await listAlbums({ category: category.slug, page });
+  if (!data) return new Response(null, { status: 404 });
+  const counts = await getCategoryCounts();
+  const path = page === 1 ? `/radovi/${category.slug}` : `/radovi/${category.slug}?stranica=${page}`;
+  view = {
+    kind: "category",
+    props: { title: category.name, intro: category.intro, counts, active: category.slug, data, basePath: `/radovi/${category.slug}` },
+  };
+  head = {
+    title: page === 1 ? category.title : `${category.title} — stranica ${page}`,
+    description: category.description,
+    path,
+    graph: collectionGraph(
+      origin,
+      { path, name: category.name, description: category.description },
+      [
+        { name: "Naslovnica", path: "/" },
+        { name: "Radovi", path: "/radovi" },
+        { name: category.name, path: `/radovi/${category.slug}` },
+      ],
+      data.albums,
+    ),
+  };
+} else {
+  if (Astro.url.search) return new Response(null, { status: 404 });
+  const album = await getAlbumBySlug(seg);
+  if (!album) return new Response(null, { status: 404 });
+  const albumCategory = categoryBySlug(album.category)!;
+  const neighbours = await getNeighbours(album);
+  const base = album.cover.base ?? mediaBase();
+  const metaLine = [albumCategory.singular, album.place, monthYear(album.eventDate), countPhotos(album.photoCount)]
+    .filter(Boolean)
+    .join(" · ");
+  view = { kind: "album", props: { album, category: albumCategory, neighbours } };
+  head = {
+    title: `${album.title} — ${albumCategory.singular.toLowerCase()}${album.place ? `, ${album.place}` : ""} | ${site.brand}`,
+    description: album.story ? album.story.slice(0, 155) : metaLine,
+    path: `/radovi/${album.slug}`,
+    image: { url: mediaUrl(base, album.cover.mediaId, 1280), width: 1280, height: Math.round((1280 * album.cover.height) / album.cover.width), alt: album.cover.alt },
+    graph: albumGraph(
+      origin,
+      { slug: album.slug, title: album.title, description: album.story || metaLine, place: album.place, eventDate: album.eventDate },
+      album.photos.slice(0, 24).map((p) => ({
+        url: mediaUrl(p.base ?? mediaBase(), p.mediaId, 1280),
+        width: p.width,
+        height: p.height,
+        caption: p.alt,
+      })),
+      [
+        { name: "Naslovnica", path: "/" },
+        { name: "Radovi", path: "/radovi" },
+        { name: albumCategory.name, path: `/radovi/${albumCategory.slug}` },
+        { name: album.title, path: `/radovi/${album.slug}` },
+      ],
+    ),
+  };
+}
+---
+
+<Public
+  title={head.title}
+  description={head.description}
+  path={head.path}
+  image={head.image}
+  type={view.kind === "album" ? "article" : "website"}
+>
+  <JsonLd slot="head" data={head.graph} />
+  {view.kind === "category" ? <ArchiveView {...view.props} /> : <AlbumView {...view.props} />}
+  {view.kind === "album" && <Lightbox slot="end" />}
+</Public>
