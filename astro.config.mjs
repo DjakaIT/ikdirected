@@ -13,6 +13,16 @@ export default defineConfig({
   // The app keeps no server sessions; an explicit (unused) in-memory driver stops the adapter provisioning a KV namespace.
   session: { driver: sessionDrivers.lruCache() },
   image: { service: passthroughImageService() },
+  // The admin image worker lazy-loads the WebP WASM fallback, which needs ES-module workers.
+  vite: {
+    worker: { format: "es" },
+    // Declared up front so the dev optimizer never re-bundles mid-run (stale deps in workerd).
+    optimizeDeps: {
+      include: ["preact", "preact/hooks", "preact/jsx-dev-runtime", "@preact/signals", "sortablejs"],
+      exclude: ["@jsquash/webp"],
+    },
+    ssr: { optimizeDeps: { include: ["preact", "preact/hooks", "preact/jsx-dev-runtime", "preact/jsx-runtime", "@preact/signals"] } },
+  },
   // Preact islands live only in the admin; public pages ship no framework JS.
   integrations: [preact({ include: ["src/admin/**"] })],
   // Self-hosted at build time (font-src 'self'); latin-ext carries č ć đ š ž.

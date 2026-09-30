@@ -1,0 +1,51 @@
+---
+// Admin shell (DESIGN §6, AC-ADM-03/04): same tokens and fonts, no grain / cursor / loader /
+// view transitions, noindex. The signed-in email comes from the Access gate (P4); until then the
+// dev identity from .dev.vars is shown.
+import { Font } from "astro:assets";
+import { env } from "cloudflare:workers";
+import "../styles/tokens.css";
+import "../styles/base.css";
+import "../styles/admin.css";
+import Toaster from "../admin/Toast.tsx";
+
+interface Props {
+  title: string;
+  current?: "albumi" | "naslovnica" | undefined;
+}
+
+const { title, current } = Astro.props;
+const email = (Astro.locals as { user?: { email: string } }).user?.email ?? env.DEV_AUTH_EMAIL ?? "";
+---
+
+<!doctype html>
+<html lang="hr" class="adm">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="theme-color" content="#0A0A0A" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <title>{title} · ikdirected admin</title>
+    <Font cssVariable="--font-archivo" preload={[{ subset: "latin" }]} />
+    <Font cssVariable="--font-space-mono" />
+  </head>
+  <body>
+    <a class="skip m" href="#sadrzaj">Prijeđi na sadržaj</a>
+    <header class="adm-top">
+      <div class="adm-top__in">
+        <a class="adm-top__brand" href="/admin">ikdirected<span>&nbsp;/ admin</span></a>
+        <nav class="adm-top__nav" aria-label="Administracija">
+          <a href="/admin" aria-current={current === "albumi" ? "page" : undefined}>Albumi</a>
+          <a href="/admin/naslovnica" aria-current={current === "naslovnica" ? "page" : undefined}>Naslovnica</a>
+        </nav>
+        {email && <span class="adm-top__email">{email}</span>}
+        <a class="adm-top__out" href="/cdn-cgi/access/logout">Odjava</a>
+      </div>
+    </header>
+    <main id="sadrzaj" class="adm-main" tabindex="-1">
+      <slot />
+    </main>
+    <Toaster client:load />
+  </body>
+</html>
