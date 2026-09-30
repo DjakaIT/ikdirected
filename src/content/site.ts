@@ -170,6 +170,16 @@ export const site = {
     },
   ] satisfies Faq[],
 
+  privacy: {
+    title: "Privatnost",
+    description: "Kako ikdirected postupa s osobnim podacima i fotografijama.",
+    // The notice itself is the photographer's legal text; placeholder until she supplies it.
+    body: [
+      "Obavijest o privatnosti uskoro će biti objavljena na ovoj stranici.", // TODO(client) real notice
+      "Za pitanja o fotografijama na kojima se nalazite, pišite na adresu navedenu u kontaktu.", // TODO(client)
+    ],
+  },
+
   contact: {
     label: "Kontakt",
     heading: ["Pišite", "mi →"],

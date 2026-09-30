@@ -112,3 +112,82 @@ export function homeGraph(origin: string, dateModified?: string): Json {
     ],
   };
 }
+
+export interface Crumb {
+  name: string;
+  path: string;
+}
+
+export function breadcrumbNode(origin: string, crumbs: Crumb[]): Json {
+  return {
+    "@type": "BreadcrumbList",
+    itemListElement: crumbs.map((c, i) => ({
+      "@type": "ListItem",
+      position: i + 1,
+      name: c.name,
+      item: absoluteUrl(origin, c.path),
+    })),
+  };
+}
+
+/** Archive and category pages (AC-SEO-02). */
+export function collectionGraph(
+  origin: string,
+  page: { path: string; name: string; description: string },
+  crumbs: Crumb[],
+  albums: Array<{ slug: string; title: string }>,
+): Json {
+  return {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "CollectionPage",
+        "@id": `${absoluteUrl(origin, page.path)}#page`,
+        url: absoluteUrl(origin, page.path),
+        name: page.name,
+        description: page.description,
+        inLanguage: "hr-HR",
+        isPartOf: { "@id": ids(origin).website },
+        about: { "@id": ids(origin).business },
+        hasPart: albums.map((a) => ({ "@type": "ImageGallery", name: a.title, url: absoluteUrl(origin, `/radovi/${a.slug}`) })),
+      },
+      breadcrumbNode(origin, crumbs),
+    ],
+  };
+}
+
+/** Album pages (AC-SEO-02): the gallery with its images, plus breadcrumbs. */
+export function albumGraph(
+  origin: string,
+  album: { slug: string; title: string; description: string; place: string; eventDate: string },
+  images: Array<{ url: string; width: number; height: number; caption: string }>,
+  crumbs: Crumb[],
+): Json {
+  const url = absoluteUrl(origin, `/radovi/${album.slug}`);
+  return {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "ImageGallery",
+        "@id": `${url}#gallery`,
+        url,
+        name: album.title,
+        description: album.description,
+        inLanguage: "hr-HR",
+        dateCreated: album.eventDate,
+        ...(album.place ? { contentLocation: { "@type": "Place", name: album.place } } : {}),
+        author: { "@id": ids(origin).person },
+        publisher: { "@id": ids(origin).business },
+        isPartOf: { "@id": ids(origin).website },
+        image: images.map((img) => ({
+          "@type": "ImageObject",
+          contentUrl: absoluteUrl(origin, img.url),
+          width: img.width,
+          height: img.height,
+          caption: img.caption,
+        })),
+      },
+      breadcrumbNode(origin, crumbs),
+    ],
+  };
+}
