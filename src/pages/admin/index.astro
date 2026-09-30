@@ -1,0 +1,8 @@
+---
+import Admin from "../../layouts/Admin.astro";
+import AlbumList from "../../admin/AlbumList.tsx";
+---
+
+<Admin title="Albumi" current="albumi">
+  <AlbumList client:load />
+</Admin>
