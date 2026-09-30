@@ -1,17 +1,16 @@
 ---
+// Reference nav (atelier.html L98–101, L227–230): brand left, "Provjerite termin" right,
+// blended over whatever sits beneath it.
 interface Props {
-  current?: "home" | "radovi" | undefined;
+  current?: "home" | undefined;
 }
 const { current } = Astro.props;
 ---
 
 <header class="nav">
   <nav aria-label="Glavna navigacija">
-    <a class="nav__brand" href="/" aria-current={current === "home" ? "page" : undefined}>ikdirected</a>
-    <div class="nav__links">
-      <a class="m" href="/radovi" aria-current={current === "radovi" ? "page" : undefined}>Radovi</a>
-      <a class="m" href="#kontakt">Provjerite termin</a>
-    </div>
+    <a href="/" aria-current={current === "home" ? "page" : undefined}>ikdirected</a>
+    <a href="#kontakt" class="m">Provjerite termin</a>
   </nav>
 </header>
 
@@ -28,48 +27,28 @@ const { current } = Astro.props;
     justify-content: space-between;
     align-items: center;
     gap: var(--s-4);
-    padding: 14px var(--pad);
+    padding: 17px var(--pad); /* 20px in the reference, minus the 24px tap-target growth */
   }
   a {
     display: inline-flex;
     align-items: center;
-    min-height: 32px;
-  }
-  .nav__brand {
+    min-height: 24px;
     letter-spacing: 0.34em;
     text-transform: uppercase;
-    font-size: 0.75rem;
-    font-weight: 450;
-  }
-  .nav__links {
-    display: flex;
-    gap: clamp(16px, 3vw, 40px);
-  }
-  .nav__links a {
-    opacity: 0.8;
-    transition: opacity var(--d-1) var(--ease-out);
-  }
-  .nav__links a:hover,
-  .nav__links a[aria-current="page"] {
-    opacity: 1;
-  }
-  .nav__links a[aria-current="page"] {
-    text-decoration: underline;
-    text-decoration-thickness: 1px;
-    text-underline-offset: 6px;
-  }
-  .nav__links a {
+    font-size: 0.75rem; /* .72rem in the reference, raised to the 12px floor (PD-02) */
+    font-weight: 400;
     white-space: nowrap;
   }
-  @media (max-width: 420px) {
-    .nav__brand {
-      letter-spacing: 0.2em;
-    }
-    .nav__links {
-      gap: 14px;
-    }
-    .nav__links a {
-      letter-spacing: 0.05em;
+  .m {
+    opacity: 0.75;
+    transition: opacity var(--d-1) var(--ease-out);
+  }
+  .m:hover {
+    opacity: 1;
+  }
+  @media (max-width: 380px) {
+    a {
+      letter-spacing: 0.22em;
     }
   }
 </style>

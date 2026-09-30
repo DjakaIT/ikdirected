@@ -1,0 +1,165 @@
+---
+import Picture from "../Picture.astro";
+import { site } from "../../content/site";
+import type { PublicPhoto } from "../../lib/data/types";
+
+interface Props {
+  /** AC-HOME-01: first featured → newest cover → static placeholder (resolved by the page). */
+  photo: PublicPhoto;
+}
+
+const { photo } = Astro.props;
+const [row1, row2, row3] = site.hero.row;
+---
+
+<section class="hero" aria-labelledby="hero-title" data-hero>
+  <div class="hero__img">
+    <Picture
+      photo={photo}
+      sizes="100vw"
+      loading="eager"
+      fetchpriority="high"
+      fit="cover"
+      appear={false}
+      fallback={2400}
+    />
+  </div>
+  <p class="hero__stamp m num" aria-hidden="true">{site.geo.stamp}</p>
+  <div class="hero__in">
+    <h1 id="hero-title">
+      <span class="wm"><span class="wm__i">{site.brand}</span></span>
+      <span class="sub">{site.hero.sub}</span>
+    </h1>
+    <div class="hero__row">
+      <span class="m dim">{row1}</span>
+      <span class="m dim">{row2}</span>
+      <a class="m dim hero__down" href="#rad">{row3}</a>
+    </div>
+  </div>
+</section>
+
+<style>
+  .hero {
+    position: relative;
+    height: 100svh;
+    min-height: 540px;
+    overflow: hidden;
+    color: var(--fg);
+  }
+  .hero__img {
+    position: absolute;
+    inset: 0;
+  }
+  .hero__img :global(.pic__img) {
+    filter: brightness(0.7);
+    transform: scale(1.08);
+    transform-origin: 60% 50%;
+  }
+  .hero__stamp {
+    position: absolute;
+    z-index: 3;
+    top: 64px;
+    right: var(--pad);
+    color: var(--fg);
+    opacity: 0.8;
+  }
+  .hero__in {
+    position: relative;
+    z-index: 3;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding: var(--pad);
+  }
+  h1 {
+    font-size: var(--t-display);
+    line-height: 0.84;
+    font-weight: 600;
+    font-stretch: 112%;
+    letter-spacing: var(--track-display);
+    text-transform: uppercase;
+  }
+  .wm {
+    display: block;
+    overflow: hidden;
+    padding-bottom: 0.04em;
+  }
+  .wm__i {
+    display: block;
+  }
+  .sub {
+    display: block;
+    max-width: 34ch;
+    margin-top: 18px;
+    font-size: clamp(0.82rem, 1.5vw, 1.15rem);
+    font-weight: 300;
+    font-stretch: 100%;
+    letter-spacing: 0.02em;
+    line-height: 1.5;
+    text-transform: none;
+    text-wrap: wrap;
+    color: var(--fg);
+  }
+  .hero__row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 20px;
+    flex-wrap: wrap;
+    border-top: 1px solid var(--line);
+    margin-top: 24px;
+    padding-top: 16px;
+  }
+  .hero__down {
+    min-height: 24px;
+    display: inline-flex;
+    align-items: center;
+  }
+  .hero__down:hover {
+    color: var(--fg);
+  }
+
+  /* Reveal (DESIGN §7): only when JS runs and motion is allowed; content is visible otherwise. */
+  @media (prefers-reduced-motion: no-preference) {
+    :global(html.js) .hero__img {
+      clip-path: inset(100% 0 0 0);
+    }
+    :global(html.js) .wm__i {
+      transform: translateY(105%);
+    }
+    :global(html.js) .hero__row {
+      opacity: 0;
+      transform: translateY(14px);
+    }
+    :global(html.js) .hero.go .hero__img {
+      clip-path: inset(0 0 0 0);
+      transition: clip-path var(--d-4) var(--ease-io) 0.1s;
+    }
+    :global(html.js) .hero.go .hero__img :global(.pic__img) {
+      transform: scale(1);
+      transition: transform 14s var(--ease-out) 0.1s;
+    }
+    :global(html.js) .hero.go .wm__i {
+      transform: none;
+      transition: transform 1.15s var(--ease-io) 0.5s;
+    }
+    :global(html.js) .hero.go .hero__row {
+      opacity: 1;
+      transform: none;
+      transition:
+        opacity 1s ease 1.1s,
+        transform 1s ease 1.1s;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .hero__img :global(.pic__img) {
+      transform: none;
+    }
+  }
+  @media (max-width: 600px) {
+    .hero__stamp {
+      top: 56px;
+    }
+  }
+</style>

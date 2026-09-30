@@ -48,8 +48,7 @@ const year = new Date().getFullYear();
   .foot__lead {
     max-width: 42ch;
     margin-top: 26px;
-    font-size: var(--t-lead);
-    color: var(--fg-2);
+    font-size: clamp(1rem, 1.5vw, 1.25rem);
   }
   .foot__g {
     display: grid;
@@ -68,10 +67,9 @@ const year = new Date().getFullYear();
   .foot__g p {
     display: inline-block;
     min-height: 24px;
-    color: var(--fg-2);
   }
-  .foot__g a:hover {
-    color: var(--fg);
+  .foot__g p {
+    color: var(--dim);
   }
   .foot__end {
     display: flex;

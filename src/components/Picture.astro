@@ -1,0 +1,98 @@
+---
+// Responsive photo: srcset of the three WebP variants, inline LQIP underneath, intrinsic
+// width/height for layout stability, and a fade-in after decode(). No inline style (CSP).
+import { mediaBase } from "../lib/data/public";
+import { mediaUrl, srcset, type Variant } from "../lib/media/srcset";
+import type { PublicPhoto } from "../lib/data/types";
+
+interface Props {
+  photo: PublicPhoto;
+  sizes: string;
+  loading?: "eager" | "lazy";
+  fetchpriority?: "high" | "auto";
+  /** natural = height follows the photo's aspect ratio; cover = fills a sized parent. */
+  fit?: "natural" | "cover";
+  /** Fade in after decode. Off for the hero, which has its own reveal. */
+  appear?: boolean;
+  /** Fallback `src` for browsers without srcset support. */
+  fallback?: Variant;
+  class?: string;
+}
+
+const {
+  photo,
+  sizes,
+  loading = "lazy",
+  fetchpriority,
+  fit = "natural",
+  appear = true,
+  fallback = 1280,
+  class: className,
+} = Astro.props;
+const base = photo.base ?? mediaBase();
+---
+
+<div class:list={["pic", `pic--${fit}`, className]} data-pic={appear ? "" : undefined}>
+  <img class="pic__lqip" src={photo.lqip} alt="" aria-hidden="true" width={photo.width} height={photo.height} />
+  <img
+    class="pic__img"
+    src={mediaUrl(base, photo.mediaId, fallback)}
+    srcset={srcset(base, photo)}
+    sizes={sizes}
+    alt={photo.alt}
+    width={photo.width}
+    height={photo.height}
+    loading={loading}
+    decoding="async"
+    fetchpriority={fetchpriority}
+  />
+</div>
+
+<script>
+  import { initPictures } from "../scripts/public/picture";
+  initPictures(document);
+</script>
+
+<style is:global>
+  .pic {
+    position: relative;
+    overflow: hidden;
+    background: var(--bg-2);
+  }
+  .pic img {
+    display: block;
+    width: 100%;
+  }
+  .pic--natural .pic__img {
+    height: auto;
+  }
+  .pic__lqip {
+    position: absolute;
+    inset: 0;
+    height: 100%;
+    object-fit: cover;
+    filter: blur(20px);
+    transform: scale(1.1);
+  }
+  .pic__img {
+    position: relative;
+  }
+  .pic--cover {
+    position: absolute;
+    inset: 0;
+  }
+  .pic--cover .pic__img {
+    height: 100%;
+    object-fit: cover;
+  }
+  html.js .pic[data-pic] .pic__img {
+    opacity: 0;
+    transition: opacity var(--d-3) var(--ease-out);
+  }
+  html.js .pic.is-loaded .pic__img {
+    opacity: 1;
+  }
+  .pic.is-loaded .pic__lqip {
+    visibility: hidden;
+  }
+</style>

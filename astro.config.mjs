@@ -5,6 +5,7 @@ import preact from "@astrojs/preact";
 
 export default defineConfig({
   output: "server",
+  devToolbar: { enabled: false },
   adapter: cloudflare({
     // No image transforms at the edge: photos are pre-sized in the admin's browser (SECURITY §8).
     imageService: "passthrough",
@@ -24,6 +25,8 @@ export default defineConfig({
       styles: ["normal"],
       subsets: ["latin", "latin-ext"],
       fallbacks: ["system-ui", "sans-serif"],
+      // Plain system-ui fallback as in the reference: glyphs Archivo lacks (→ ✕) render like the design.
+      optimizedFallbacks: false,
       options: { experimental: { variableAxis: { wdth: [["75", "125"]] } } },
     },
     {

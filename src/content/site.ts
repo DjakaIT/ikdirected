@@ -24,8 +24,6 @@ export interface Service {
   name: string;
   text: string;
   priceLine: string;
-  /** Static fallback image alt when no published album exists in the category (PD-14). */
-  fallbackAlt: string;
 }
 
 export interface Faq {
@@ -85,7 +83,6 @@ export const site = {
   gallery: {
     label: "Odabrani radovi",
     title: "Galerija",
-    lead: "Odabrane fotografije s vjenčanja, evenata i portreta. Kliknite za veliki prikaz.",
   },
 
   servicesHeading: "Usluge i cijene",
@@ -96,28 +93,24 @@ export const site = {
       name: "Vjenčanja",
       text: "Cijeli dan, od priprema do zadnjeg plesa. Prvih četrdesetak fotografija dobivate u tjedan dana, cijelu galeriju unutar mjesec dana. Ako imate manju proslavu, postoji i kraći paket do pet sati.", // TODO(client) delivery times
       priceLine: "Od 1.200 € · kraći paket 700 €", // TODO(client)
-      fallbackAlt: "Mladoženja ljubi mladenku nakon obreda",
     },
     {
       category: "eventi",
       name: "Eventi",
       text: "Konferencije, otvorenja i koncerti. Trideset fotografija za objave šaljem isti dan, ostatak u roku od 72 sata. Radim i s vašim marketing timom ako trebate određene kadrove.", // TODO(client) delivery times
       priceLine: "Od 150 € po satu", // TODO(client)
-      fallbackAlt: "Nasmijani par na proslavi na otvorenom",
     },
     {
       category: "portreti",
       name: "Portreti",
       text: "Za web, društvene mreže i medije. Kadrove dogovorimo prije snimanja pa termin traje sat do sat i pol, u studiju ili vani.", // TODO(client) session length
       priceLine: "Od 250 €", // TODO(client)
-      fallbackAlt: "Portret žene uz prirodno svjetlo",
     },
     {
       category: "iz-zraka",
       name: "Iz zraka",
       text: "Dron kadrovi lokacije, objekta ili proslave. Idu uz vjenčanja i evente na otvorenom, ako lokacija dopušta letenje, a mogu se naručiti i zasebno.",
       priceLine: "Od 200 € · novo od 2026.", // TODO(client)
-      fallbackAlt: "Plaža i more snimljeni dronom",
     },
   ] satisfies Service[],
 

@@ -1,0 +1,12 @@
+---
+// The only place set:html is used: the payload is JSON serialised with `<` escaped (SECURITY §5),
+// never HTML built from user text.
+import { jsonLdString } from "../lib/seo/jsonld";
+
+interface Props {
+  data: unknown;
+}
+const { data } = Astro.props;
+---
+
+<script is:inline type="application/ld+json" set:html={jsonLdString(data)} />

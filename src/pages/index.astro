@@ -1,10 +1,40 @@
 ---
 import Public from "../layouts/Public.astro";
+import JsonLd from "../components/JsonLd.astro";
+import Loader from "../components/home/Loader.astro";
+import Cursor from "../components/home/Cursor.astro";
+import Hero from "../components/home/Hero.astro";
+import Say from "../components/home/Say.astro";
+import Track from "../components/home/Track.astro";
+import Services from "../components/home/Services.astro";
+import Area from "../components/home/Area.astro";
+import Faq from "../components/home/Faq.astro";
+import Lightbox from "../components/Lightbox.astro";
 import { site } from "../content/site";
+import { siteOrigin } from "../lib/env";
+import { getHomeData, mediaBase } from "../lib/data/public";
+import { placeholderPhoto } from "../lib/data/placeholder";
+import { srcset } from "../lib/media/srcset";
+import { homeGraph } from "../lib/seo/jsonld";
+
+const home = await getHomeData();
+// AC-HOME-01: first featured → newest cover (data layer) → static placeholder.
+const heroPhoto = home.hero?.photo ?? placeholderPhoto("ph-01");
+const heroSrcset = srcset(heroPhoto.base ?? mediaBase(), heroPhoto);
 ---
 
 <Public title={site.seo.homeTitle} description={site.seo.homeDescription} path="/" current="home">
-  <section>
-    <h1>{site.brand}</h1>
-  </section>
+  <Fragment slot="head">
+    <link rel="preload" as="image" imagesrcset={heroSrcset} imagesizes="100vw" fetchpriority="high" />
+    <JsonLd data={homeGraph(siteOrigin())} />
+  </Fragment>
+  <Loader slot="overlay" />
+  <Cursor slot="overlay" />
+  <Hero photo={heroPhoto} />
+  <Say />
+  <Track items={home.track} publishedCount={home.publishedCount} />
+  <Services covers={home.categoryCovers} />
+  <Area />
+  <Faq />
+  <Lightbox slot="end" />
 </Public>
