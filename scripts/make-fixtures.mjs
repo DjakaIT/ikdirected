@@ -3,7 +3,7 @@
 // Part 1 (now): placeholder "photos" for the front-end (public/placeholder/p/<id>/{640,1280,2400}.webp),
 // their LQIP manifest (src/lib/data/placeholders.json) and the default OG image.
 // Part 2 (backend phase): upload attack/validation fixtures in tests/fixtures (TESTING §4).
-import { mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import sharp from "sharp";
 
@@ -145,16 +145,60 @@ async function renderScene(scene) {
   return { id: scene.id, width: w, height: h, lqip, tone: scene.tone, master };
 }
 
-const manifest = [];
-let ogSource;
-for (const scene of SCENES) {
-  const r = await renderScene(scene);
-  if (scene.id === "ph-01") ogSource = r.master;
-  manifest.push({ id: r.id, width: r.width, height: r.height, lqip: r.lqip, tone: r.tone });
-  console.log(`placeholder ${r.id} ${r.width}x${r.height}`);
+// WebP output is not byte-stable across runs, so committed placeholders are rebuilt only on --force.
+const FORCE = process.argv.includes("--force");
+const havePlaceholders = existsSync(join(OUT, SCENES[SCENES.length - 1].id, "640.webp"));
+if (havePlaceholders && !FORCE) {
+  console.log("placeholders exist — skipped (use --force to rebuild)");
+} else {
+  const manifest = [];
+  let ogSource;
+  for (const scene of SCENES) {
+    const r = await renderScene(scene);
+    if (scene.id === "ph-01") ogSource = r.master;
+    manifest.push({ id: r.id, width: r.width, height: r.height, lqip: r.lqip, tone: r.tone });
+    console.log(`placeholder ${r.id} ${r.width}x${r.height}`);
+  }
+  mkdirSync(join(ROOT, "src", "lib", "data"), { recursive: true });
+  writeFileSync(join(ROOT, "src", "lib", "data", "placeholders.json"), JSON.stringify(manifest, null, 2) + "\n");
+  await sharp(ogSource).resize(1200, 630, { fit: "cover" }).jpeg({ quality: 82, mozjpeg: true }).toFile(join(ROOT, "public", "og-default.jpg"));
+  console.log("og-default.jpg 1200x630");
 }
 
-mkdirSync(join(ROOT, "src", "lib", "data"), { recursive: true });
-writeFileSync(join(ROOT, "src", "lib", "data", "placeholders.json"), JSON.stringify(manifest, null, 2) + "\n");
-await sharp(ogSource).resize(1200, 630, { fit: "cover" }).jpeg({ quality: 82, mozjpeg: true }).toFile(join(ROOT, "public", "og-default.jpg"));
-console.log("og-default.jpg 1200x630");
+// ── Part 2a: upload fixtures for the admin e2e tests (TESTING §4) ─────────────────────────────
+const FIX = join(ROOT, "tests", "fixtures");
+mkdirSync(FIX, { recursive: true });
+
+// Real camera-like JPEG: 3000×2000 stored, EXIF Orientation=6 (display portrait) and GPS
+// coordinates. libvips maps IFD3 to the GPS IFD. The privacy test proves both are gone after
+// the in-browser re-encode and that the orientation was applied.
+const cameraSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="3000" height="2000"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#d9a066"/><stop offset="1" stop-color="#2d3b55"/></linearGradient></defs><rect width="3000" height="2000" fill="url(#g)"/><rect x="0" y="0" width="600" height="2000" fill="#b33"/></svg>`;
+await sharp(Buffer.from(cameraSvg))
+  .jpeg({ quality: 85 })
+  .withMetadata({ orientation: 6 })
+  .withExifMerge({
+    IFD0: { Make: "Fixture", Model: "GPS Test Camera" },
+    IFD3: {
+      GPSLatitudeRef: "N",
+      GPSLatitude: "44/1 7/1 1000/100",
+      GPSLongitudeRef: "E",
+      GPSLongitude: "15/1 13/1 5000/100",
+    },
+  })
+  .toFile(join(FIX, "camera-gps-3000x2000.jpg"));
+console.log("fixture camera-gps-3000x2000.jpg");
+
+// Small ordinary inputs for fast upload flows.
+await sharp(Buffer.from(SCENES[0].svg(1200, 800).replace(/^/, `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800">`) + "</svg>"))
+  .jpeg({ quality: 80 })
+  .toFile(join(FIX, "upload-landscape.jpg"));
+await sharp(Buffer.from(SCENES[1].svg(800, 1000).replace(/^/, `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="1000">`) + "</svg>"))
+  .png()
+  .toFile(join(FIX, "upload-portrait.png"));
+console.log("fixture upload-landscape.jpg, upload-portrait.png");
+
+// Random bytes with a .heic name → the browser cannot decode it (client error path).
+let x = 12345;
+const junk = Buffer.alloc(4096, 0).map(() => ((x = (x * 1103515245 + 12345) & 0x7fffffff), x & 0xff));
+writeFileSync(join(FIX, "fake.heic"), junk);
+console.log("fixture fake.heic");
