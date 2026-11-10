@@ -41,6 +41,14 @@ const CATEGORY_CYCLE: CategorySlug[] = [
   "vjencanja", "eventi", "vjencanja", "portreti", "vjencanja", "iz-zraka", "eventi", "vjencanja",
   "portreti", "vjencanja", "eventi", "vjencanja", "iz-zraka", "vjencanja", "eventi",
 ];
+// Cover per category (newest visible album first) so archive and service cards show a fitting photo.
+// Slots hold real photos since scripts/import-photos.mjs; ph-01 is the hero, so it is not a cover here.
+const COVERS: Record<CategorySlug, string[]> = {
+  vjencanja: ["ph-06", "ph-12", "ph-08", "ph-04", "ph-14", "ph-10", "ph-07", "ph-09"],
+  eventi: ["ph-11", "ph-05"],
+  portreti: ["ph-02", "ph-13", "ph-15"],
+  "iz-zraka": ["ph-03"],
+};
 const STORY =
   "Ovo je testni tekst priče albuma. Ovdje fotografkinja u dvije-tri rečenice opisuje dan, mjesto i atmosferu — kratko, bez nabrajanja.";
 
@@ -59,6 +67,7 @@ function build(): { albums: MockAlbumRow[]; photos: MockPhotoRow[] } {
   const photos: MockPhotoRow[] = [];
   const total = 33; // 30 published, 2 drafts, 1 soft-deleted
   let photoSeq = 0;
+  const coverSeq: Partial<Record<CategorySlug, number>> = {};
 
   for (let n = 1; n <= total; n++) {
     const id = mockUuid(1, n);
@@ -75,9 +84,15 @@ function build(): { albums: MockAlbumRow[]; photos: MockPhotoRow[] } {
     const stamp = `${isoDay(year, month, day)}T12:00:00.000Z`;
     const count = 6 + ((n * 11) % 38); // 6–43 photos
 
+    const covers = COVERS[category];
+    const coverId = covers[(coverSeq[category] ?? 0) % covers.length];
+    if (status === "published" && !deleted) coverSeq[category] = (coverSeq[category] ?? 0) + 1;
+
     const albumPhotos: MockPhotoRow[] = [];
     for (let p = 0; p < count; p++) {
-      const ph = placeholders[(n * 5 + p * 3) % placeholders.length]!;
+      const ph =
+        (p === 0 ? placeholders.find((x) => x.id === coverId) : undefined) ??
+        placeholders[(n * 5 + p * 3) % placeholders.length]!;
       photoSeq++;
       albumPhotos.push({
         id: mockUuid(2, photoSeq),
