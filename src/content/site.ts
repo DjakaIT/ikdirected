@@ -232,3 +232,5 @@ export const site = {
 
 export const categoryBySlug = (slug: string): Category | undefined =>
   site.categories.find((c) => c.slug === slug);
+
+export const isCategorySlug = (slug: string): slug is CategorySlug => categoryBySlug(slug) !== undefined;

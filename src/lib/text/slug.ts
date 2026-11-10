@@ -1,7 +1,7 @@
 // Album slugs (AC-ALBED-02): generated server-side from the title on first publish, then frozen.
 
-/** Categories and top-level routes an album slug may never take. */
-export const RESERVED_SLUGS = new Set(["vjencanja", "eventi", "portreti", "iz-zraka", "admin", "api"]);
+/** Categories, top-level routes and the pagination segment an album slug may never take (api/lib/content.php mirrors this). */
+export const RESERVED_SLUGS = new Set(["vjencanja", "eventi", "portreti", "iz-zraka", "admin", "api", "stranica", "media"]);
 
 const MAP: Record<string, string> = { č: "c", ć: "c", đ: "d", š: "s", ž: "z", dž: "dz" };
 

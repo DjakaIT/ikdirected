@@ -1,0 +1,70 @@
+# ikdirected — public_html/.htaccess (Hostinger: LiteSpeed/Apache + PHP; docs/ARCHITECTURE.md §1).
+# The site is static HTML (Astro build). /api/ is the PHP admin backend (api/.htaccess), /media/ holds uploaded
+# photos (media/.htaccess). scripts/dev-router.php emulates these rules for local tests: keep both in step.
+Options -Indexes -MultiViews
+DirectoryIndex index.html
+# /radovi is both radovi.html and the folder radovi/: never add a slash, and let mod_rewrite see such requests.
+DirectorySlash Off
+RewriteEngine On
+RewriteOptions AllowNoSlash
+
+# HTTPS and no www (301)
+RewriteCond %{HTTPS} !=on
+RewriteCond %{HTTP:X-Forwarded-Proto} !=https
+RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+RewriteCond %{HTTP_HOST} ^www\.(.+)$ [NC]
+RewriteRule ^ https://%1%{REQUEST_URI} [L,R=301]
+
+# Dot paths (.git, .htaccess, .ik-paket.json) do not exist for visitors, except /.well-known/ (SSL validation)
+RewriteRule ^\.well-known/ - [L]
+RewriteRule (^|/)\. - [R=404,L]
+
+ErrorDocument 404 /404.html
+# internal redirects (ErrorDocument) are not rewritten again
+RewriteCond %{ENV:REDIRECT_STATUS} .
+RewriteRule ^ - [L]
+
+# Admin API and uploaded photos have their own rules
+RewriteRule ^api(/|$) - [L]
+RewriteRule ^media(/|$) - [L]
+
+# One canonical address per page: no trailing slash (except the home page)
+RewriteCond %{REQUEST_URI} ^(.+)/$
+RewriteRule ^ %1 [L,R=301]
+
+# Admin album editor: one static page for every album id (the id is read from the address)
+RewriteRule ^admin/albumi/[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$ admin/album.html [L]
+
+# Clean URLs: /radovi/slug -> radovi/slug.html
+RewriteCond %{REQUEST_FILENAME}.html -f
+RewriteRule ^(.+)$ $1.html [L]
+
+<IfModule mod_headers.c>
+# includeSubDomains only once every subdomain has HTTPS (Daniel, docs/SETUP.md)
+Header always set Strict-Transport-Security "max-age=31536000"
+Header always set X-Content-Type-Options "nosniff"
+Header always set Referrer-Policy "strict-origin-when-cross-origin"
+Header always set Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=(), browsing-topics=()"
+Header always set Cross-Origin-Opener-Policy "same-origin"
+Header always set X-Frame-Options "DENY"
+# CSP is split: script-src/style-src with the hashes of each page's inline scripts are in that page's <meta>
+# (Astro security.csp). Only what <meta> cannot carry is here. Do NOT add script-src or default-src here: two
+# policies intersect and would block the hashed inline scripts.
+Header always set Content-Security-Policy "frame-ancestors 'none'; base-uri 'none'; object-src 'none'; form-action 'self'"
+</IfModule>
+
+<IfModule mod_headers.c>
+<If "%{REQUEST_URI} =~ m#^/admin#">
+Header always set X-Robots-Tag "noindex, nofollow"
+Header always set Cache-Control "no-store"
+</If>
+<ElseIf "%{REQUEST_URI} =~ m#^/_astro/#">
+Header set Cache-Control "public, max-age=31536000, immutable"
+</ElseIf>
+<ElseIf "%{REQUEST_URI} =~ m#\.(webp|jpg|png|svg|woff2)$#">
+Header set Cache-Control "public, max-age=604800"
+</ElseIf>
+<Else>
+Header set Cache-Control "no-cache"
+</Else>
+</IfModule>

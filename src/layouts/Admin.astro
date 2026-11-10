@@ -1,9 +1,8 @@
 ---
 // Admin shell (DESIGN §6, AC-ADM-03/04): same tokens and fonts, no grain / cursor / loader /
-// view transitions, noindex. The signed-in email comes from the Access gate (P4); until then the
-// dev identity from .dev.vars is shown.
+// view transitions, noindex. Sign-in and the account menu are islands (AuthGate, AccountBar) that
+// talk to the PHP API; this static shell holds no data.
 import { Font } from "astro:assets";
-import { env } from "cloudflare:workers";
 import "../styles/tokens.css";
 import "../styles/base.css";
 import "../styles/admin.css";
@@ -15,7 +14,7 @@ interface Props {
 }
 
 const { title, current } = Astro.props;
-const email = (Astro.locals as { user?: { email: string } }).user?.email ?? env.DEV_AUTH_EMAIL ?? "";
+const email = "";
 ---
 
 <!doctype html>

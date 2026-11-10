@@ -1,8 +1,8 @@
-// Public read API. Currently backed by the in-memory mock; the backend phase swaps the bodies for
-// D1 queries (ARCHITECTURE §12) without changing these signatures. Every query here must only
-// ever see published, non-deleted content (SECURITY T8).
+// Public read API, evaluated at build time (static site). Content comes from source(): the admin's
+// public export or demo content. The export only ever contains published, non-deleted content
+// (SECURITY T8); every function here keeps that invariant.
 import type { CategorySlug } from "../../content/site";
-import { mockDb, type MockAlbumRow, type MockPhotoRow } from "./mock";
+import { source, type SourceAlbum, type SourcePhoto } from "./source";
 import type {
   AlbumCardData,
   AlbumPageData,
@@ -20,30 +20,28 @@ const TRACK_MIN = 4;
 /** When fewer than TRACK_MIN photos are featured, fill with newest covers up to this many. */
 const TRACK_FILL = 8;
 
-/** Base URL for photo variants. Mock mode serves placeholders from /public. */
+/** Base URL for photo variants: /media for uploads, /placeholder for demo content. */
 export function mediaBase(): string {
-  return "/placeholder";
+  return source().mediaBase;
 }
 
-const isLive = (a: MockAlbumRow): boolean => a.status === "published" && a.deleted_at === null;
-
-function toPhoto(row: MockPhotoRow): PublicPhoto {
+function toPhoto(row: SourcePhoto): PublicPhoto {
   return { id: row.id, mediaId: row.media_id, width: row.width, height: row.height, alt: row.alt, lqip: row.lqip };
 }
 
-function livePhotos(albumId: string): MockPhotoRow[] {
-  return mockDb.photos
-    .filter((p) => p.album_id === albumId && p.deleted_at === null)
+function livePhotos(albumId: string): SourcePhoto[] {
+  return source()
+    .photos.filter((p) => p.album_id === albumId)
     .sort((a, b) => a.position - b.position);
 }
 
-function publishedAlbums(category?: CategorySlug): MockAlbumRow[] {
-  return mockDb.albums
-    .filter((a) => isLive(a) && (!category || a.category === category))
-    .sort((a, b) => b.event_date.localeCompare(a.event_date) || b.created_at.localeCompare(a.created_at));
+function publishedAlbums(category?: CategorySlug): SourceAlbum[] {
+  return source()
+    .albums.filter((a) => !category || a.category === category)
+    .sort((a, b) => b.event_date.localeCompare(a.event_date) || b.published_at.localeCompare(a.published_at) || a.id.localeCompare(b.id));
 }
 
-function toCard(a: MockAlbumRow): AlbumCardData | null {
+function toCard(a: SourceAlbum): AlbumCardData | null {
   const photos = livePhotos(a.id);
   const cover = photos.find((p) => p.id === a.cover_photo_id) ?? photos[0];
   if (!cover || !a.slug) return null;
@@ -61,21 +59,21 @@ function toCard(a: MockAlbumRow): AlbumCardData | null {
   };
 }
 
-const cards = (rows: MockAlbumRow[]): AlbumCardData[] =>
+const cards = (rows: SourceAlbum[]): AlbumCardData[] =>
   rows.map(toCard).filter((c): c is AlbumCardData => c !== null);
 
 export async function getHomeData(): Promise<HomeData> {
-  const live = new Map(mockDb.albums.filter(isLive).map((a) => [a.id, a]));
-  const featured = mockDb.photos
-    .filter((p) => p.featured === 1 && p.deleted_at === null && live.has(p.album_id))
+  const live = new Map(source().albums.map((a) => [a.id, a]));
+  const featured = source()
+    .photos.filter((p) => p.featured_position !== null && live.has(p.album_id))
     .sort((a, b) => (a.featured_position ?? 0) - (b.featured_position ?? 0))
     .slice(0, TRACK_MAX);
 
-  const toItem = (p: MockPhotoRow): TrackItem => {
+  const toItem = (p: SourcePhoto): TrackItem => {
     const a = live.get(p.album_id)!;
     return {
       photo: toPhoto(p),
-      album: { slug: a.slug!, title: a.title, category: a.category, place: a.place, eventDate: a.event_date },
+      album: { slug: a.slug, title: a.title, category: a.category, place: a.place, eventDate: a.event_date },
     };
   };
   const track = featured.map(toItem);
@@ -125,8 +123,8 @@ export async function listAlbums(opts: { category?: CategorySlug | undefined; pa
 }
 
 export async function getAlbumBySlug(slug: string): Promise<AlbumPageData | null> {
-  const a = mockDb.albums.find((x) => x.slug === slug);
-  if (!a || !isLive(a)) return null;
+  const a = source().albums.find((x) => x.slug === slug);
+  if (!a) return null;
   const card = toCard(a);
   if (!card) return null;
   return { ...card, story: a.story, photos: livePhotos(a.id).map(toPhoto), updatedAt: a.updated_at };
@@ -141,7 +139,10 @@ export async function getNeighbours(album: AlbumCardData): Promise<Neighbours> {
 
 /** Every published album for the sitemap. */
 export async function listSitemapAlbums(): Promise<Array<{ slug: string; updatedAt: string }>> {
-  return publishedAlbums()
-    .filter((a) => a.slug)
-    .map((a) => ({ slug: a.slug!, updatedAt: a.updated_at }));
+  return publishedAlbums().map((a) => ({ slug: a.slug, updatedAt: a.updated_at }));
+}
+
+/** Every published album slug, for static paths. */
+export async function listAlbumSlugs(): Promise<string[]> {
+  return publishedAlbums().map((a) => a.slug);
 }

@@ -1,0 +1,22 @@
+---
+// /radovi/{kategorija}/stranica/N for N ≥ 2. Only categories, only existing pages.
+import type { GetStaticPaths } from "astro";
+import ArchivePage from "../../../../components/archive/ArchivePage.astro";
+import { site } from "../../../../content/site";
+import { listAlbums } from "../../../../lib/data/public";
+
+export const getStaticPaths = (async () => {
+  const paths = [];
+  for (const c of site.categories) {
+    const first = await listAlbums({ category: c.slug, page: 1 });
+    for (let page = 2; page <= (first?.totalPages ?? 1); page++) {
+      paths.push({ params: { seg: c.slug, n: String(page) }, props: { category: c.slug, page } });
+    }
+  }
+  return paths;
+}) satisfies GetStaticPaths;
+
+const { category, page } = Astro.props;
+---
+
+<ArchivePage category={category} page={page} />

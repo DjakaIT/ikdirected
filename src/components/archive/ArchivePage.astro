@@ -1,0 +1,47 @@
+---
+// A whole archive page: /radovi, /radovi/stranica/N, /radovi/{kategorija}, /radovi/{kategorija}/stranica/N.
+// Static routes only generate pages that exist, so out-of-range pages are the plain 404 (AC-ARC-03).
+import Public from "../../layouts/Public.astro";
+import JsonLd from "../JsonLd.astro";
+import ArchiveView from "./ArchiveView.astro";
+import { categoryBySlug, site, type CategorySlug } from "../../content/site";
+import { getCategoryCounts, listAlbums } from "../../lib/data/public";
+import { siteOrigin } from "../../lib/env";
+import { archivePath } from "../../lib/http/archive-path";
+import { collectionGraph } from "../../lib/seo/jsonld";
+
+interface Props {
+  category?: CategorySlug | undefined;
+  page: number;
+}
+
+const { category: slug, page } = Astro.props;
+const category = slug ? categoryBySlug(slug) : undefined;
+const data = await listAlbums({ category: slug, page });
+if (!data) throw new Error(`archive page ${slug ?? "all"}/${page} does not exist`);
+const counts = await getCategoryCounts();
+
+const basePath = archivePath(slug);
+const path = archivePath(slug, page);
+const name = category ? category.name : "Radovi";
+const baseTitle = category ? category.title : site.seo.archiveTitle;
+const description = category ? category.description : site.seo.archiveDescription;
+const crumbs = [
+  { name: "Naslovnica", path: "/" },
+  { name: "Radovi", path: "/radovi" },
+  ...(category ? [{ name: category.name, path: basePath }] : []),
+];
+const graph = collectionGraph(siteOrigin(), { path, name, description }, crumbs, data.albums);
+---
+
+<Public title={page === 1 ? baseTitle : `${baseTitle} — stranica ${page}`} description={description} path={path}>
+  <JsonLd slot="head" data={graph} />
+  <ArchiveView
+    title={name}
+    intro={category?.intro}
+    counts={counts}
+    active={slug ?? "all"}
+    data={data}
+    basePath={basePath}
+  />
+</Public>

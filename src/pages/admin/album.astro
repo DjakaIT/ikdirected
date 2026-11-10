@@ -1,0 +1,8 @@
+---
+import Admin from "../../layouts/Admin.astro";
+import AlbumRoute from "../../admin/AlbumRoute.tsx";
+---
+
+<Admin title="Album" current="albumi">
+  <AlbumRoute client:only="preact" />
+</Admin>

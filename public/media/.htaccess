@@ -1,0 +1,24 @@
+# public_html/media/ — photos uploaded through the admin (written by api/, never part of the build package,
+# never deleted by an install). Only p/<uuid>/<640|1280|2400>.webp exists for visitors; nothing here ever runs.
+# The API writes only bytes it parsed as plain WebP (ARCHITECTURE §8.4) under ids it generated itself.
+Options -Indexes -ExecCGI -Includes
+DirectoryIndex disabled
+RemoveHandler .php .phtml .phar .php3 .php4 .php5 .php7 .php8 .pl .py .cgi .shtml
+RemoveType .php .phtml .phar
+<FilesMatch "\.(?i:php\d?|phtml|phar|pl|py|cgi|sh|shtml|html?|svg|js|xml)$">
+  Require all denied
+</FilesMatch>
+
+RewriteEngine On
+RewriteRule ^p/[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/(640|1280|2400)\.webp$ - [L]
+RewriteRule ^ - [R=404,L]
+
+AddType image/webp .webp
+<IfModule mod_headers.c>
+Header always set X-Content-Type-Options "nosniff"
+Header always set Content-Security-Policy "default-src 'none'; sandbox"
+Header always set Cross-Origin-Resource-Policy "same-origin"
+Header set Content-Disposition "inline"
+# a photo id is never reused: new upload = new address
+Header set Cache-Control "public, max-age=31536000, immutable"
+</IfModule>

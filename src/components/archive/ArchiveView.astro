@@ -28,7 +28,7 @@ for (const album of data.albums) {
   else groups.push({ year, albums: [album] });
 }
 const span = data.years ? (data.years.from === data.years.to ? `${data.years.from}.` : `${data.years.from}. — ${data.years.to}.`) : "";
-const nextHref = data.page < data.totalPages ? `${basePath}?stranica=${data.page + 1}` : null;
+const nextHref = data.page < data.totalPages ? `${basePath}/stranica/${data.page + 1}` : null;
 ---
 
 <section class="arc__head" aria-labelledby="arc-title">
