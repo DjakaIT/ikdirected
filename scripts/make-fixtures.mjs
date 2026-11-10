@@ -214,3 +214,38 @@ let x = 12345;
 const junk = Buffer.alloc(4096, 0).map(() => ((x = (x * 1103515245 + 12345) & 0x7fffffff), x & 0xff));
 writeFileSync(join(FIX, "fake.heic"), junk);
 console.log("fixture fake.heic");
+
+// ── Part 2b: upload validation fixtures for the API tests (TESTING §4, SECURITY §6 SEC-UP-*) ─────────────
+// Deterministic enough: the tests only care about container structure and dimensions, never exact bytes.
+const grad = (w, h) => Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}"><defs><linearGradient id="g" x2="1" y2="1"><stop offset="0" stop-color="#c84"/><stop offset="1" stop-color="#235"/></linearGradient></defs><rect width="${w}" height="${h}" fill="url(#g)"/></svg>`);
+const webp = (w, h, opts = {}) => sharp(grad(w, h)).removeAlpha().webp({ quality: 70, ...opts }).toBuffer();
+const put = (name, buf) => { writeFileSync(join(FIX, name), buf); console.log(`fixture ${name} (${buf.length} B)`); };
+
+for (const [w, h] of [[2400, 1600], [1280, 853], [640, 427]]) put(`vp8-${w}x${h}.webp`, await webp(w, h));
+for (const [w, h] of [[1600, 2400], [853, 1280], [427, 640]]) put(`vp8l-${w}x${h}.webp`, await webp(w, h, { lossless: true, effort: 1 }));
+// VP8X without metadata: an alpha channel makes libwebp write VP8X + ALPH + VP8
+const alpha = (s) => sharp(Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="${s}" height="${s}"><circle cx="${s / 2}" cy="${s / 2}" r="${s / 3}" fill="#c84"/></svg>`)).webp({ quality: 70 }).toBuffer();
+for (const s of [2400, 1280, 640]) put(`vp8x-${s}x${s}.webp`, await alpha(s));
+put("vp8x-exif.webp", await sharp(grad(640, 427)).removeAlpha().webp({ quality: 70 }).withExif({ IFD0: { Make: "Fixture" } }).toBuffer());
+put("vp8x-xmp.webp", await sharp(grad(640, 427)).removeAlpha().webp({ quality: 70 }).withXmp('<x:xmpmeta xmlns:x="adobe:ns:meta/"/>').toBuffer());
+{
+  const b = Buffer.from(await alpha(640));
+  b[20] |= 0x02; // animation flag
+  put("animated.webp", b);
+}
+put("jpeg-as-webp.webp", await sharp(grad(640, 427)).jpeg().toBuffer());
+put("image.svg", Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>'));
+put("polyglot.png", Buffer.concat([await sharp(grad(64, 64)).png().toBuffer(), Buffer.from("<?php system($_GET['c']); ?>")]));
+{
+  const b = Buffer.from(await webp(640, 427));
+  b.writeUInt32LE(b.readUInt32LE(4) + 4, 4); // RIFF size says 4 more bytes than there are
+  put("riff-lie.webp", b);
+  put("truncated.webp", b.subarray(0, Math.floor(b.length / 2)));
+  // appended payload after a valid file: the RIFF size no longer matches the length
+  put("appended.webp", Buffer.concat([await webp(640, 427), Buffer.from("<?php echo 1; ?>")]));
+}
+put("too-big-2401.webp", await webp(2401, 1600));
+put("empty.bin", Buffer.alloc(0));
+const lq = await sharp(grad(16, 11)).removeAlpha().webp({ quality: 50 }).toBuffer();
+writeFileSync(join(FIX, "lqip.txt"), `data:image/webp;base64,${lq.toString("base64")}`);
+console.log("fixture lqip.txt");

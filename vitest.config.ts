@@ -1,5 +1,4 @@
 import { defineConfig } from "vitest/config";
-import { cloudflareTest } from "@cloudflare/vitest-pool-workers";
 
 export default defineConfig({
   test: {
@@ -12,24 +11,13 @@ export default defineConfig({
         },
       },
       {
-        plugins: [
-          cloudflareTest({
-            main: "./tests/integration/worker.ts",
-            wrangler: { configPath: "./wrangler.jsonc" },
-            miniflare: {
-              bindings: {
-                SITE_ORIGIN: "http://localhost:4321",
-                PUBLIC_MEDIA_BASE: "/_dev/media",
-                CF_ACCESS_TEAM_DOMAIN: "https://test.cloudflareaccess.com",
-                CF_ACCESS_AUD: "test-aud",
-                ADMIN_EMAILS: "admin@example.test",
-              },
-            },
-          }),
-        ],
+        // The real PHP admin API (api/) on PHP's built-in server; needs dist/ (npm run build) for the router.
         test: {
-          name: "workers",
-          include: ["tests/integration/**/*.test.ts"],
+          name: "php",
+          include: ["tests/php/**/*.test.ts"],
+          environment: "node",
+          testTimeout: 30_000,
+          hookTimeout: 30_000,
         },
       },
     ],
