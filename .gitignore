@@ -13,6 +13,9 @@ dist/
 .env
 .env.*
 
+# original photos for scripts/import-photos.mjs (only generated WebP is committed)
+photos/
+
 # test output
 test-results/
 playwright-report/

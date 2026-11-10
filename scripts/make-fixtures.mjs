@@ -3,7 +3,7 @@
 // Part 1 (now): placeholder "photos" for the front-end (public/placeholder/p/<id>/{640,1280,2400}.webp),
 // their LQIP manifest (src/lib/data/placeholders.json) and the default OG image.
 // Part 2 (backend phase): upload attack/validation fixtures in tests/fixtures (TESTING §4).
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import sharp from "sharp";
 
@@ -151,18 +151,30 @@ const havePlaceholders = existsSync(join(OUT, SCENES[SCENES.length - 1].id, "640
 if (havePlaceholders && !FORCE) {
   console.log("placeholders exist — skipped (use --force to rebuild)");
 } else {
+  // Slots filled by scripts/import-photos.mjs (tone "photo") survive --force unless --overwrite-photos.
+  const manifestPath = join(ROOT, "src", "lib", "data", "placeholders.json");
+  const previous = existsSync(manifestPath) ? JSON.parse(readFileSync(manifestPath, "utf8")) : [];
+  const keepPhotos = !process.argv.includes("--overwrite-photos");
   const manifest = [];
   let ogSource;
   for (const scene of SCENES) {
+    const real = previous.find((p) => p.id === scene.id && p.tone === "photo");
+    if (real && keepPhotos) {
+      manifest.push(real);
+      console.log(`placeholder ${scene.id} is a real photo — kept (use --overwrite-photos to replace)`);
+      continue;
+    }
     const r = await renderScene(scene);
     if (scene.id === "ph-01") ogSource = r.master;
     manifest.push({ id: r.id, width: r.width, height: r.height, lqip: r.lqip, tone: r.tone });
     console.log(`placeholder ${r.id} ${r.width}x${r.height}`);
   }
   mkdirSync(join(ROOT, "src", "lib", "data"), { recursive: true });
-  writeFileSync(join(ROOT, "src", "lib", "data", "placeholders.json"), JSON.stringify(manifest, null, 2) + "\n");
-  await sharp(ogSource).resize(1200, 630, { fit: "cover" }).jpeg({ quality: 82, mozjpeg: true }).toFile(join(ROOT, "public", "og-default.jpg"));
-  console.log("og-default.jpg 1200x630");
+  writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + "\n");
+  if (ogSource) {
+    await sharp(ogSource).resize(1200, 630, { fit: "cover" }).jpeg({ quality: 82, mozjpeg: true }).toFile(join(ROOT, "public", "og-default.jpg"));
+    console.log("og-default.jpg 1200x630");
+  }
 }
 
 // ── Part 2a: upload fixtures for the admin e2e tests (TESTING §4) ─────────────────────────────
