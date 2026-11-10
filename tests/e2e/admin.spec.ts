@@ -1,7 +1,7 @@
-// Admin screens against the front-end-phase API simulation (src/admin/mock). Every test gets a
-// fresh browser context, so the simulation starts from its seed each time.
-import { expect, test, type Page } from "@playwright/test";
+// Admin screens against the real PHP API (api/). Every test gets its own data namespace seeded with the demo
+// content and a signed-in admin (admin-fixture.ts).
 import { join } from "node:path";
+import { expect, seed, test, type Page } from "./admin-fixture";
 
 const FIX = join(process.cwd(), "tests", "fixtures");
 const A1 = "/admin/albumi/00000000-0000-4000-8000-0000000186a1"; // published, 17 photos, first is cover
@@ -21,23 +21,38 @@ async function newAlbum(page: Page): Promise<void> {
 const tiles = (page: Page) => page.locator(".tile--photo");
 const menuFor = (page: Page, i: number) => page.getByRole("button", { name: `Izbornik fotografije ${i}`, exact: true });
 
+/** the next PATCH of an album / the next upload answers 500 (network-level, the server never sees it) */
 async function failNext(page: Page, kind: "PATCH" | "UPLOAD"): Promise<void> {
-  await page.evaluate((k) => localStorage.setItem("ik-mock-fail", k), kind);
+  const url = kind === "UPLOAD" ? /\/api\/admin\/albums\/[^/]+\/photos$/ : /\/api\/admin\/albums\/[^/]+$/;
+  const method = kind === "UPLOAD" ? "POST" : "PATCH";
+  let done = false;
+  await page.route(url, async (route) => {
+    if (done || route.request().method() !== method) return route.fallback();
+    done = true;
+    await route.fulfill({ status: 500, contentType: "application/json", body: JSON.stringify({ error: { code: "INTERNAL", message: "x" } }) });
+  });
 }
 
+test.beforeEach(async ({ page }) => {
+  await seed(page);
+});
+
 test.describe("admin shell", () => {
-  test("AC-ADM-03 top bar shows the signed-in email and Odjava", async ({ page }) => {
+  test("AC-ADM-03 top bar shows the signed-in user, publish status and Odjava", async ({ page }) => {
     await page.goto("/admin");
-    await expect(page.getByText("dev@example.test")).toBeVisible();
-    await expect(page.getByRole("link", { name: "Odjava" })).toHaveAttribute("href", "/cdn-cgi/access/logout");
+    await expect(page.getByRole("button", { name: "test", exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Odjava" })).toBeVisible();
+    await expect(page.getByRole("status").filter({ hasText: "Objava nije postavljena" })).toBeVisible();
     const nav = page.getByRole("navigation", { name: "Administracija" });
     await expect(nav.getByRole("link", { name: "Albumi" })).toHaveAttribute("aria-current", "page");
   });
 
   test("AC-ADM-04 admin pages are noindex", async ({ page }) => {
     for (const path of ["/admin", A1, "/admin/naslovnica"]) {
-      await page.goto(path);
+      const res = await page.goto(path);
       await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /noindex/);
+      expect(res?.headers()["x-robots-tag"]).toBe("noindex, nofollow");
+      expect(res?.headers()["cache-control"]).toBe("no-store");
     }
   });
 });
@@ -66,7 +81,7 @@ test.describe("Albumi", () => {
   });
 
   test("AC-ALBL-04 empty state offers Novi album", async ({ page }) => {
-    await page.addInitScript(() => localStorage.setItem("ik-admin-mock-v1", JSON.stringify({ albums: [], photos: [] })));
+    await seed(page, { empty: true });
     await page.goto("/admin");
     await expect(page.getByText("Još nemaš nijedan album. Napravi prvi i dodaj fotografije.")).toBeVisible();
     await expect(page.getByRole("button", { name: "Novi album" })).toBeVisible();
@@ -131,9 +146,11 @@ test.describe("album editor", () => {
     const second = await tiles(page).nth(1).getAttribute("data-id");
     await menuFor(page, 1).click();
     await expect(page.getByRole("menu")).toBeVisible();
+    const saved = page.waitForResponse((r) => r.url().endsWith("/order") && r.request().method() === "PUT");
     await page.getByRole("menuitem", { name: "Pomakni desno" }).click();
     await expect(tiles(page).nth(0)).toHaveAttribute("data-id", second ?? "");
     await expect(tiles(page).nth(1)).toHaveAttribute("data-id", first ?? "");
+    expect((await saved).status()).toBe(204);
     await page.reload();
     await expect(tiles(page).nth(1)).toHaveAttribute("data-id", first ?? "");
   });
@@ -243,11 +260,15 @@ test.describe("upload", () => {
 
   test("AC-UP-03 privacy: stored WebP has no EXIF/XMP/GPS, long edge 2400, orientation applied", async ({ page }) => {
     await newAlbum(page);
+    const uploaded = page.waitForResponse((r) => /\/api\/admin\/albums\/[^/]+\/photos$/.test(r.url()) && r.request().method() === "POST", { timeout: 45_000 });
     await page.locator("[data-upload-input]").setInputFiles(join(FIX, "camera-gps-3000x2000.jpg"));
+    const photo = (await (await uploaded).json()) as { id: string };
     await expect(tiles(page)).toHaveCount(1, { timeout: 45_000 });
-    const info = await page.evaluate(async () => {
-      const parts = (globalThis as { __ikLastUpload?: { v2400: Blob } }).__ikLastUpload!;
-      const b = new Uint8Array(await parts.v2400.arrayBuffer());
+    // the exact bytes the server stored and serves
+    const stored = await page.request.get(`/media/p/${photo.id}/2400.webp`);
+    expect(stored.headers()["content-type"]).toBe("image/webp");
+    const info = await page.evaluate(async (bytes) => {
+      const b = new Uint8Array(bytes);
       const s = (o: number, n: number) => String.fromCharCode(...b.slice(o, o + n));
       const u16 = (o: number) => b[o]! | (b[o + 1]! << 8);
       const u24 = (o: number) => b[o]! | (b[o + 1]! << 8) | (b[o + 2]! << 16);
@@ -283,7 +304,7 @@ test.describe("upload", () => {
         h,
         hasGpsText: text.includes("GPS") || text.includes("Fixture"),
       };
-    });
+    }, [...(await stored.body())]);
     expect(info.riff).toBe("RIFF");
     expect(info.webp).toBe("WEBP");
     expect(info.chunks).not.toContain("EXIF");
@@ -324,8 +345,10 @@ test.describe("Naslovnica", () => {
     const items = page.locator(".fitem");
     await expect(items).toHaveCount(12);
     const first = await items.nth(0).getAttribute("data-id");
+    const saved = page.waitForResponse((r) => r.url().endsWith("/featured/order") && r.request().method() === "PUT");
     await items.nth(0).getByRole("button", { name: "Pomakni desno" }).click();
     await expect(items.nth(1)).toHaveAttribute("data-id", first ?? "");
+    expect((await saved).status()).toBe(204);
     await page.reload();
     await expect(page.locator(".fitem").nth(1)).toHaveAttribute("data-id", first ?? "");
     await page.locator(".fitem").nth(0).getByRole("button", { name: "Makni", exact: true }).click();

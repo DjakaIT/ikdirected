@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 
-const ORIGIN = "http://localhost:4321";
+// canonical URLs name the public address the site was built for (SITE_ORIGIN), never the address in use
+const ORIGIN = (process.env.SITE_ORIGIN || "https://ikdirected.com").replace(/\/+$/, "");
 
 for (const path of ["/", "/stranica-koja-ne-postoji"]) {
   test.describe(`layout ${path}`, () => {

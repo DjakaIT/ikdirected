@@ -2,7 +2,7 @@
 // Shapes mirror ARCHITECTURE §3 rows. Titles and places are obviously fake on purpose — never
 // realistic invented clients (ARCHITECTURE §14).
 import type { CategorySlug } from "../../content/site";
-import placeholders from "./placeholders.json";
+import placeholders from "./placeholders.json" with { type: "json" };
 
 export interface MockAlbumRow {
   id: string;

@@ -1,6 +1,8 @@
 import { defineConfig, devices } from "@playwright/test";
 
-const PORT = 4321;
+// The built site exactly as on the hosting: static dist/ + the PHP admin API behind scripts/dev-router.php
+// (emulates the .htaccess files). IK_TEST=1 gives every test its own data namespace (tests/e2e/admin-fixture.ts).
+const PORT = 4329;
 
 export default defineConfig({
   testDir: "tests/e2e",
@@ -9,7 +11,7 @@ export default defineConfig({
   retries: process.env.CI ? 1 : 0,
   reporter: process.env.CI ? [["line"], ["html", { open: "never" }]] : "line",
   use: {
-    baseURL: `http://localhost:${PORT}`,
+    baseURL: `http://127.0.0.1:${PORT}`,
     trace: "retain-on-failure",
   },
   projects: [
@@ -29,9 +31,10 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: `node scripts/ensure-dev-vars.mjs && npm run dev -- --port ${PORT}`,
-    url: `http://localhost:${PORT}`,
+    command: `npm run build && node scripts/serve.mjs --port ${PORT} --data .local/e2e --fresh`,
+    url: `http://127.0.0.1:${PORT}/api/admin/auth/state`,
+    env: { IK_TEST: "1" },
     reuseExistingServer: !process.env.CI,
-    timeout: 120_000,
+    timeout: 180_000,
   },
 });

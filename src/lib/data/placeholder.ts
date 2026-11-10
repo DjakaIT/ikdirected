@@ -2,7 +2,7 @@
 // Used when the database has nothing to show (AC-HOME-01 fallback, PD-14 service cards).
 import type { CategorySlug } from "../../content/site";
 import { site } from "../../content/site";
-import placeholders from "./placeholders.json";
+import placeholders from "./placeholders.json" with { type: "json" };
 import type { PublicPhoto } from "./types";
 
 export const PLACEHOLDER_BASE = "/placeholder";

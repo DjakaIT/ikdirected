@@ -46,10 +46,13 @@ test.describe("album page", () => {
     await expect(page.getByRole("link", { name: "Vaš datum je slobodan? Provjerite." })).toBeVisible();
   });
 
-  test("AC-ALB-05 deleted album and unknown slug → 404", async ({ page }) => {
+  test("AC-ALB-05 deleted album and unknown slug → 404; a query string keeps the canonical address", async ({ page }) => {
     expect((await page.goto("/radovi/testni-album-9"))?.status()).toBe(404);
     expect((await page.goto("/radovi/testni-album-4"))?.status()).toBe(404);
-    expect((await page.goto("/radovi/testni-album-1?x=1"))?.status()).toBe(404);
+    expect((await page.goto("/radovi/ne-postoji"))?.status()).toBe(404);
+    // static hosting serves the page for any query string; the canonical link names the one address
+    await page.goto("/radovi/testni-album-1?x=1");
+    expect(await page.locator('link[rel="canonical"]').getAttribute("href")).toMatch(/\/radovi\/testni-album-1$/);
   });
 
   test("AC-ALB-06 srcset of three WebP variants, LQIP, first two eager", async ({ page }) => {

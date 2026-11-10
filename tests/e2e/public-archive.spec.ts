@@ -30,9 +30,9 @@ test.describe("archive /radovi", () => {
     const cards = page.locator("[data-card]");
     await expect(cards).toHaveCount(24);
     const more = page.getByRole("link", { name: "Učitaj još" });
-    await expect(more).toHaveAttribute("href", "/radovi?stranica=2");
+    await expect(more).toHaveAttribute("href", "/radovi/stranica/2");
     await more.click();
-    await expect(page).toHaveURL(/\/radovi\?stranica=2$/);
+    await expect(page).toHaveURL(/\/radovi\/stranica\/2$/);
     expect(await cards.count()).toBeGreaterThan(24);
     await expect(more).toHaveCount(0);
     // Year groups are merged, never duplicated.
@@ -40,11 +40,12 @@ test.describe("archive /radovi", () => {
     expect(new Set(years).size).toBe(years.length);
   });
 
-  test("AC-ARC-03 invalid or out-of-range page → 404", async ({ page }) => {
-    for (const q of ["0", "01", "abc", "1.0", "-1", "99"]) {
-      const res = await page.goto(`/radovi?stranica=${q}`);
+  test("AC-ARC-03 invalid or out-of-range page → 404; page 1 has one address", async ({ page }) => {
+    for (const q of ["0", "1", "01", "abc", "1.0", "-1", "99"]) {
+      const res = await page.goto(`/radovi/stranica/${q}`);
       expect(res?.status(), q).toBe(404);
     }
+    expect((await page.goto("/radovi/vjencanja/stranica/9"))?.status()).toBe(404);
   });
 
   test("AC-ARC-04 search filters loaded cards and announces the result", async ({ page }) => {
@@ -82,7 +83,7 @@ test.describe("archive without JS", () => {
     await page.goto("/radovi");
     await expect(page.locator("[data-search-wrap]")).toBeHidden();
     await page.getByRole("link", { name: "Učitaj još" }).click();
-    await expect(page).toHaveURL(/stranica=2/);
+    await expect(page).toHaveURL(/\/radovi\/stranica\/2$/);
     expect(await page.locator("[data-card]").count()).toBeGreaterThan(0);
     await page.getByRole("navigation", { name: "Kategorije" }).getByRole("link", { name: /^Eventi/ }).click();
     await expect(page).toHaveURL(/\/radovi\/eventi$/);
