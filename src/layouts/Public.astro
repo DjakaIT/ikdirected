@@ -6,6 +6,7 @@ import "../styles/public.css";
 import Seo, { type SeoImage } from "../components/Seo.astro";
 import Nav from "../components/Nav.astro";
 import Footer from "../components/Footer.astro";
+import { createHash } from "node:crypto";
 
 interface Props {
   title: string;
@@ -18,6 +19,12 @@ interface Props {
 }
 
 const { title, description, path, image, noindex, current, type } = Astro.props;
+Astro.csp?.insertDirective("img-src 'self' data:");
+// Runs before first paint: enables JS-only styles and decides on the first-visit loader (PD-05). A constant of
+// ours (never data), rendered as is; Astro does not hash is:inline scripts, so its hash is added here (CSP, SECURITY §4).
+const BOOT =
+  '(function(d){var h=d.documentElement;h.classList.add("js");try{if(location.pathname==="/"&&!sessionStorage.getItem("ik-seen")&&!matchMedia("(prefers-reduced-motion: reduce)").matches)h.classList.add("is-loading")}catch(e){}})(document);';
+Astro.csp?.insertScriptHash(`sha256-${createHash("sha256").update(BOOT).digest("base64")}`);
 ---
 
 <!doctype html>
@@ -25,21 +32,7 @@ const { title, description, path, image, noindex, current, type } = Astro.props;
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <!-- Runs before first paint: enables JS-only styles and decides on the first-visit loader (PD-05). Static text, hashed for CSP. -->
-    <script is:inline>
-      (function (d) {
-        var h = d.documentElement;
-        h.classList.add("js");
-        try {
-          if (
-            location.pathname === "/" &&
-            !sessionStorage.getItem("ik-seen") &&
-            !matchMedia("(prefers-reduced-motion: reduce)").matches
-          )
-            h.classList.add("is-loading");
-        } catch (e) {}
-      })(document);
-    </script>
+    <script is:inline set:html={BOOT} />
     <Font cssVariable="--font-archivo" preload={[{ subset: "latin" }]} />
     <Font cssVariable="--font-space-mono" />
     <Seo title={title} description={description} path={path} image={image} noindex={noindex} type={type} />

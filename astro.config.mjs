@@ -11,6 +11,14 @@ export default defineConfig({
   trailingSlash: "never",
   build: { format: "file" },
   devToolbar: { enabled: false },
+  // CSP (SECURITY §4) as a <meta> per page with the hashes of its scripts and styles; directives a <meta> cannot
+  // carry (frame-ancestors) are headers in public/.htaccess. img-src and admin extras come from the layouts.
+  security: {
+    csp: {
+      algorithm: "SHA-256",
+      directives: ["default-src 'self'", "font-src 'self'", "connect-src 'self'", "object-src 'none'", "base-uri 'none'", "form-action 'self'"],
+    },
+  },
   // No image transforms: photos are pre-sized in the admin's browser (SECURITY §8).
   image: { service: passthroughImageService() },
   // The admin image worker lazy-loads the WebP WASM fallback, which needs ES-module workers.
