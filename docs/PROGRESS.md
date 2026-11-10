@@ -49,6 +49,10 @@ backend swap touches only `src/lib/data/*`.
 - [x] P6.6 photo grid: sortablejs drag + ⋯ menu (keyboard), cover, ★ homepage, alt, undo delete
 - [x] P6.7 Naslovnica strip, n / 12, ←/→ + drag, Makni, empty state
       Gate green: 43 unit/int, 222 e2e (3 projects), axe clean on 9 routes incl. admin.
+## Content — real photos (Daniel, 2026-11-10)  [done]
+- [x] scripts/import-photos.mjs (`npm run photos:import -- <dir>`): ph-01…ph-16 originals → WebP variants,
+      LQIP, og-default.jpg. 16 photos from 4 Instagram posts Daniel linked (DfcBDcUjpnV, DeFCt_gDnGw,
+      DdwlWLZDo6P, DdRLt6mjmcC; DeU-LwbOZJQ is a reel). Mock album covers now per category. Gate green.
 ## Backend  [next] — P0.3 rest, P0.4, P2.1/2.3/2.4/2.6/2.7, P3.1 dev media + P3.2–3.7 wiring (swap
    src/lib/data/public.ts to D1), P4, P5 (handlers in src/lib/api), P6 wiring (api.ts → fetch/XHR,
    delete src/admin/mock + test hooks, privacy test via /_dev/media), P7.
@@ -97,14 +101,21 @@ FE4: @preact/signals 2.11.2 · sortablejs 1.15.7 · @jsquash/webp 1.5.0
 - 2026-10-01 sortablejs typed via local src/admin/sortablejs.d.ts (no @types dep). Vite optimizeDeps
   pre-declared (stale-deps 500s in workerd otherwise); worker format es (WASM lazy import).
 - 2026-10-01 make-fixtures: placeholders rebuilt only with --force (WebP bytes not stable across runs).
+- 2026-11-10 Placeholder slots hold real photos (tone "photo"); originals stay out of git (photos/ ignored,
+  selection kept outside the repo). make-fixtures --force keeps them unless --overwrite-photos.
+- 2026-11-10 Daniel asked about Netlify hosting: stack needs D1/R2/Access → told him it stays on Cloudflare
+  unless he decides otherwise (would mean rewriting the backend before P2).
 
 ## Blockers
-(none)
+- 2026-11-10 Cold Vite cache: first desktop admin e2e tests can fail (page without <head>); re-run green.
+  Fix in P0.3 by warming /admin in the webServer step.
 
 ## Waiting on Daniel / client
 - Real domain, email, phone, person name, prices, FAQ answers, review quote → `src/content/site.ts`
 - Category intros in site.ts are drafted from reference facts only — client must approve (TODO(client))
 - Cloudflare setup (docs/SETUP.md) before first deploy
+- ph-03 (Iz zraka card fallback) is not a drone photo — swap in a real aerial shot when available
+- Instagram page title names the photographer "Ivana Klarica" — confirm before putting it in site.ts
 
 ## Next session starts at
 Backend — P0.3 remainder (eslint + prettier, noUncheckedIndexedAccess), then P2.1 `migrations/0001_init.sql`.
