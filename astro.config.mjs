@@ -24,6 +24,18 @@ export default defineConfig({
   // The admin image worker lazy-loads the WebP WASM fallback, which needs ES-module workers.
   vite: {
     worker: { format: "es" },
+    plugins: [
+      {
+        // Dev only: /admin/albumi/{id} is one static page (public/.htaccess does this rewrite on the hosting).
+        name: "ik-admin-album-route",
+        configureServer(server) {
+          server.middlewares.use((req, _res, next) => {
+            if (req.url && /^\/admin\/albumi\/[0-9a-f-]{36}\/?(\?.*)?$/.test(req.url)) req.url = "/admin/album";
+            next();
+          });
+        },
+      },
+    ],
     // Declared up front so the dev optimizer never re-bundles mid-run.
     optimizeDeps: {
       include: ["preact", "preact/hooks", "preact/jsx-dev-runtime", "@preact/signals", "sortablejs"],
