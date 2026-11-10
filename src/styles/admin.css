@@ -1046,3 +1046,232 @@ legend.field__label {
     display: none;
   }
 }
+
+/* ── sign-in (AuthGate) ─────────────────────────────────────────────── */
+.auth {
+  width: min(440px, 100%);
+  margin: var(--s-9) auto var(--s-8);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+}
+.auth--wide {
+  width: min(560px, 100%);
+}
+.auth__brand {
+  font-size: var(--t-meta);
+  letter-spacing: var(--track-caps);
+  text-transform: uppercase;
+  color: var(--dim);
+}
+.auth__title {
+  font-size: var(--t-h2);
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+  color: var(--fg);
+}
+.auth__title:focus {
+  outline: none;
+}
+.auth__intro,
+.acct__help {
+  color: var(--fg-2);
+  line-height: 1.55;
+}
+.auth__form,
+.acct__form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-5);
+}
+.field__hint {
+  color: var(--dim);
+  font-size: 0.875rem;
+  line-height: 1.45;
+}
+.auth__error {
+  min-height: 1.4em;
+  color: var(--danger);
+  line-height: 1.4;
+}
+.auth__error:empty {
+  min-height: 0;
+}
+.auth__submit {
+  align-self: flex-start;
+}
+.auth__loading {
+  margin: var(--s-9) auto;
+  color: var(--dim);
+  text-align: center;
+}
+.auth__steps {
+  padding-left: 1.2em;
+  color: var(--fg-2);
+  line-height: 1.55;
+}
+.auth__qr {
+  width: 220px;
+  height: 220px;
+  background: #fff;
+  image-rendering: pixelated;
+}
+.auth__app {
+  align-self: flex-start;
+  max-width: 100%;
+  white-space: normal;
+  line-height: 1.45;
+}
+.auth__manual summary {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  color: var(--fg-2);
+  text-decoration: underline;
+  text-underline-offset: 5px;
+}
+.auth__key,
+.auth__codes {
+  font-size: 1.05rem;
+  letter-spacing: 0.08em;
+  color: var(--fg);
+  word-break: break-all;
+}
+.auth__codes {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--s-2) var(--s-5);
+  padding: var(--s-4);
+  border: 1px solid var(--line-2);
+}
+.auth__row {
+  display: flex;
+  gap: var(--s-3);
+  flex-wrap: wrap;
+}
+.auth__check {
+  display: flex;
+  gap: var(--s-3);
+  align-items: flex-start;
+  min-height: 44px;
+  color: var(--fg-2);
+  line-height: 1.45;
+}
+.auth__check input {
+  width: 20px;
+  height: 20px;
+  margin-top: 1px;
+  accent-color: var(--fg);
+}
+
+/* ── account bar (publish status, menu, sign-out) ───────────────────── */
+.acct {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2) var(--s-4);
+  flex-wrap: wrap;
+}
+.acct__status {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  font-size: var(--t-meta);
+  color: var(--dim);
+}
+.acct__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--ok);
+}
+.acct__status--wait .acct__dot {
+  background: var(--dim);
+}
+.acct__status--bad .acct__dot {
+  background: var(--danger);
+}
+.acct__now {
+  min-height: 44px;
+  padding: 0 var(--s-2);
+  background: none;
+  border: 0;
+  color: var(--fg);
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: 5px;
+  cursor: pointer;
+}
+.acct__menu {
+  position: relative;
+}
+.acct__menu > .adm-top__out,
+.acct > .adm-top__out {
+  background: none;
+  border: 0;
+  font: inherit;
+  cursor: pointer;
+}
+.acct__list {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 4px);
+  z-index: var(--z-toast);
+  min-width: 220px;
+  list-style: none;
+  padding: var(--s-2) 0;
+  background: var(--bg-2);
+  border: 1px solid var(--line-2);
+}
+.acct__list button {
+  width: 100%;
+  min-height: 44px;
+  padding: 0 var(--s-4);
+  background: none;
+  border: 0;
+  color: var(--fg-2);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.acct__list button:hover,
+.acct__list button:focus-visible {
+  color: var(--fg);
+  background: var(--bg-3);
+}
+.acct__users {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  margin: var(--s-4) 0;
+}
+.acct__users li {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--s-2);
+  padding-bottom: var(--s-2);
+  border-bottom: 1px solid var(--line);
+}
+.acct__actions {
+  display: inline-flex;
+  gap: var(--s-3);
+}
+.acct__invite {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  align-items: flex-start;
+}
+.acct__invite .field {
+  width: 100%;
+}
+.acct__link {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  margin-top: var(--s-4);
+}

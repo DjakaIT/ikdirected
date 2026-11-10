@@ -25,6 +25,7 @@ final class App
     private bool $production;
     private string $origin;
     private string $data;
+    private string $mediaDir;
     /** @var list<Closure> work done after the answer is sent */
     private array $after = [];
 
@@ -45,6 +46,7 @@ final class App
         $this->sessions = new Sessions($this->data . '/sesije', $this->production);
         $this->store = new Store($this->data);
         $this->content = new Content('/media');
+        $this->mediaDir = $mediaDir;
         $this->media = new Media($mediaDir);
         // 'all': failed sign-ins from all addresses together — an attack from many IPs cannot exhaust the hosting
         // (every password check deliberately costs ~20 MB and tens of ms); past it, sign-in is refused unchecked
@@ -535,6 +537,9 @@ final class App
         remove_dir($this->data);
         @mkdir($this->data, 0700, true);
         if (is_array($b['state'] ?? null)) write_json($this->data . '/sadrzaj.json', $b['state']);
+        // demo photos: the dev router serves /media/p/<id>/… of seeded photos from the placeholder images
+        remove_dir($this->mediaDir);
+        if (is_array($b['mediaMap'] ?? null)) write_json($this->mediaDir . '/seed-map.json', $b['mediaMap']);
         if (($b['user'] ?? true) !== false) {
             $this->users->createFirst('test');
             $this->setPassword('test', hash_password('test-lozinka-dovoljno-duga'));

@@ -85,8 +85,14 @@ if ($path === '/api' || str_starts_with($path, '/api/')) {
 if ($path === '/media' || str_starts_with($path, '/media/')) {
     $rel = substr($path, strlen('/media/'));
     $h = htaccess_headers("$dist/media/.htaccess", $path);
-    if (preg_match('#^p/[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/(640|1280|2400)\.webp$#', $rel) && is_file("$media/$rel")) {
-        return serve_file("$media/$rel", 200, $h);
+    if (preg_match('#^p/([0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})/(640|1280|2400)\.webp$#', $rel, $m)) {
+        if (is_file("$media/$rel")) return serve_file("$media/$rel", 200, $h);
+        // tests only: photos of the seeded demo content are the placeholder images
+        $map = getenv('IK_TEST') === '1' && is_file("$media/seed-map.json") ? (json_decode((string) file_get_contents("$media/seed-map.json"), true) ?: []) : [];
+        $ph = $map[$m[1]] ?? null;
+        if (is_string($ph) && preg_match('/^ph-\d{2}$/', $ph) && is_file("$dist/placeholder/p/$ph/{$m[2]}.webp")) {
+            return serve_file("$dist/placeholder/p/$ph/{$m[2]}.webp", 200, $h);
+        }
     }
     http_response_code(404);
     send_headers($h);
