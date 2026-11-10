@@ -1,208 +1,164 @@
 # ARCHITECTURE
 
-Sections: 1 Overview · 2 Tree · 3 D1 schema · 4 Bindings/env · 5 Request pipeline · 6 API ·
-7 Layout algorithms · 8 Upload pipeline · 9 Media serving · 10 Public caching · 11 Purge worker ·
-12 Queries worth copying · 13 Content file · 14 Seed & fixtures
+Sections: 1 Overview · 2 Tree · 3 Store · 4 Config/env · 5 Request rules · 6 API · 7 Layout algorithms ·
+8 Upload pipeline · 9 Media serving · 10 Publishing · 11 Purge · 12 Local runs · 13 Content file · 14 Fixtures
+
+Decision 2026-11-10 (Daniel): host on **Hostinger Unlimited** (the account that already hosts
+CamelliaSinensis) instead of Cloudflare Workers/D1/R2/Access. The CamelliaSinensis "uredništvo" model is
+reused: static site + PHP admin + publishing through GitHub Actions. Node.js apps on that plan share a
+process limit across all sites and answer 503 when it is reached (CamelliaSinensis FRONTEND-ODLUKA §2),
+so nothing runs Node on the hosting.
 
 ---
 
 ## 1. Overview
 
 ```
- visitor ──► ikdirected.com (Cloudflare) ──► Worker: Astro 6 SSR ──► D1 (albums, photos)
-                      │                                   │
-                      │ /admin*, /api/admin*               └──► R2 put/delete (admin only)
-                      ▼
-            Cloudflare Access (email one-time PIN) ── JWT ──► verified again in middleware
- visitor ──► media.ikdirected.com ──► R2 public bucket (custom domain, CDN-cached, immutable)
- cron    ──► workers/purge (separate Worker) ──► hard-delete soft-deleted rows + R2 objects > 7 days
+ visitor ──► https://<domain>/            LiteSpeed/Apache: public_html/*.html (Astro static build)
+         ──► https://<domain>/media/p/…   public_html/media/p/<photoId>/{640,1280,2400}.webp (uploads)
+ admin   ──► https://<domain>/admin       static shell + Preact islands (AuthGate, screens)
+              │  fetch / XHR
+              ▼
+         /api/admin/*  ──► public_html/api/index.php (PHP 8.1+, no DB)
+              │              data: <domain folder>/ikdirected-podaci/   (outside public_html)
+              │              photos: public_html/media/
+              │  after a change (20 s quiet or "Objavi sada"): public export → GitHub branch `sadrzaj`
+              ▼
+ GitHub Actions objava.yml: code from main + sadrzaj/sadrzaj.json → astro build → npm run paket → artifact "hosting"
+              │  postavi.yml → GET /api/admin/osvjezi ; the admin's status poll also checks
+              ▼
+ PHP Installer: download artifact → copy into public_html → remove files the previous package had and this one has not
 ```
 
-Why this shape: zero monthly cost within free tiers, no server to patch, images never touch the
-app origin, auth is delegated to a hardened identity proxy but still verified in code.
+Why this shape: no monthly cost beyond the plan and the domain, nothing to keep running on the host, the
+public site is plain files (fast, cacheable, no runtime to attack), the admin's data never leaves the hosting
+(only the public export goes to GitHub), and the same model already runs for CamelliaSinensis.
 
-Image processing happens **in the admin's browser** (resize + WebP + EXIF strip). The Worker
-only validates bytes and stores them — it never decodes images (free-plan CPU budget is ~10 ms).
+Image processing happens **in the admin's browser** (resize + WebP + EXIF strip). The server only parses
+the WebP container and stores the bytes — it never decodes or transforms an image.
+
+Trade-off accepted: a change is public after the build (~2 min, status shown in the admin top bar).
 
 ---
 
-## 2. Tree (create in P0/P1; keep it)
+## 2. Tree
 
 ```
-astro.config.mjs        wrangler.jsonc          .dev.vars.example      migrations/0001_init.sql
+astro.config.mjs           output static, build.format file, security.csp, dev proxy /api /media → :8787
+public/.htaccess           public_html rules: HTTPS, clean URLs, admin album rewrite, headers, cache
+public/media/.htaccess     only p/<uuid>/<640|1280|2400>.webp, nosniff + sandbox CSP, no scripts
+api/                       → public_html/api/
+  index.php .htaccess      front controller (PHP/extension check), everything routed here
+  lib/ base passwords users sessions limits store content media export install publish app (.php)
 src/
-  middleware.ts                       # pipeline §5
-  env.d.ts
-  content/site.ts                     # all business facts, TODO(client) markers
-  styles/ tokens.css base.css public.css admin.css
-  lib/
-    db/        albums.ts photos.ts audit.ts types.ts
-    auth/      access.ts             # JWT verify + allowlist + dev bypass guard
-    http/      errors.ts headers.ts origin.ts cache.ts json.ts
-    media/     webp.ts keys.ts srcset.ts
-    layout/    rhythm.ts track.ts
-    text/      slug.ts plural.ts dates.ts
-    seo/       jsonld.ts meta.ts
-    validation/schemas.ts            # zod (import { z } from "astro/zod")
-    api/       albums.ts photos.ts featured.ts upload.ts gate.ts   # handlers, see §6
-  components/  Seo Nav Footer Picture Lightbox AlbumCard ChipBar YearDivider RhythmGrid ... (.astro)
-  layouts/     Public.astro Admin.astro
-  scripts/public/  track.ts lightbox.ts reveal.ts loader.ts cursor.ts archive.ts marquee.ts
-  admin/           # Preact islands, admin only
-    api.ts store.ts Toast.tsx Dialog.tsx
-    AlbumList.tsx AlbumEditor.tsx PhotoGrid.tsx Uploader.tsx Featured.tsx
-    image/pipeline.ts image/worker.ts image/webp-fallback.ts
-  pages/
-    index.astro  404.astro  sitemap.xml.ts  robots.txt.ts
-    radovi/index.astro  radovi/[seg].astro          # seg = category OR album slug
-    admin/index.astro  admin/albumi/[id].astro  admin/naslovnica.astro
-    api/admin/albums/index.ts  api/admin/albums/[id].ts  api/admin/albums/[id]/restore.ts
-    api/admin/albums/[id]/photos.ts  api/admin/albums/[id]/order.ts
-    api/admin/photos/[id].ts  api/admin/photos/[id]/restore.ts
-    api/admin/featured/index.ts  api/admin/featured/order.ts
-    _dev/media/[...key].ts                          # DEV ONLY, see §9
-workers/purge/  index.ts  wrangler.jsonc
-scripts/        seed.mjs  make-fixtures.mjs  backup.md
-tests/          unit/  integration/  e2e/  fixtures/
+  content/site.ts          all business facts, TODO(client) markers
+  lib/data/ source.ts      build-time content: IK_SADRZAJ export (validated) or demo (mock.ts)
+            public.ts      read API used by pages (published content only)
+  lib/ layout/ media/ seo/ text/ http/archive-path.ts
+  components/ layouts/ (Public.astro, Admin.astro) scripts/public/
+  admin/                   Preact, admin only: api.ts session.ts AuthGate.tsx AccountBar.tsx screens/
+                           AlbumList AlbumEditor PhotoGrid Uploader Featured Dialog Toast image/ vendor/qrcode.mjs
+  pages/ index 404 privatnost sitemap.xml robots.txt radovi/{index,[seg],stranica/[n],[seg]/stranica/[n]}
+         admin/{index,album,naslovnica}.astro
+scripts/  dev.mjs serve.mjs dev-router.php php.mjs build-local.mjs paket-hosting.mjs zip.mjs
+          make-fixtures.mjs import-photos.mjs
+.github/workflows/ objava.yml postavi.yml
+tests/    unit/ php/ (API against php -S) e2e/ fixtures/
 ```
 
 ---
 
-## 3. D1 schema — `migrations/0001_init.sql`
+## 3. Store (`api/lib/store.php`) — `ikdirected-podaci/`
 
-```sql
-PRAGMA foreign_keys = ON;
+| File | Holds |
+|---|---|
+| `sadrzaj.json` | `{format, version, updated_at, albums[], photos[], retired_slugs[]}` — every row incl. soft-deleted |
+| `povijest/*.json` | snapshot at most every 15 min, last 100 kept |
+| `izvoz.json` | the public export after every change (what the next build gets) |
+| `dnevnik.log` | audit: `{at, actor, ip, action, target}` per line, rotated at 1 MB |
+| `korisnici.json` | users: name, role, password hash (Argon2id), TOTP secret, recovery code hashes, sessionVersion |
+| `sesije/<sha256(id)>.json` | sessions |
+| `ogranicenja.json` | attempt and upload counters |
+| `objava*.json`, `instalirano.json`, `osvjezi.json`, `ciscenje.json` | publishing and housekeeping state |
+| `PRVO-POSTAVLJANJE.txt` | first-setup code, deleted after the first account |
 
-CREATE TABLE albums (
-  id             TEXT PRIMARY KEY,                 -- crypto.randomUUID()
-  slug           TEXT UNIQUE,                      -- NULL until first publish, then frozen
-  title          TEXT NOT NULL CHECK (length(title) BETWEEN 1 AND 120),
-  category       TEXT NOT NULL CHECK (category IN ('vjencanja','eventi','portreti','iz-zraka')),
-  place          TEXT NOT NULL DEFAULT '' CHECK (length(place) <= 80),
-  event_date     TEXT NOT NULL CHECK (event_date GLOB '[0-9][0-9][0-9][0-9]-[0-1][0-9]-[0-3][0-9]'),
-  story          TEXT NOT NULL DEFAULT '' CHECK (length(story) <= 600),
-  cover_photo_id TEXT,
-  status         TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft','published')),
-  published_at   TEXT,
-  created_at     TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
-  updated_at     TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
-  deleted_at     TEXT
-);
-CREATE INDEX idx_albums_public ON albums(status, deleted_at, event_date DESC);
-CREATE INDEX idx_albums_cat    ON albums(category, status, deleted_at, event_date DESC);
+Rows (unchanged from the original schema):
+- **album** `id` (UUID v4) · `slug` (null until first publish, then frozen) · `title` 1–120 · `category`
+  ∈ vjencanja/eventi/portreti/iz-zraka · `place` ≤ 80 · `event_date` YYYY-MM-DD · `story` ≤ 600 ·
+  `cover_photo_id` · `status` draft/published · `published_at` · `created_at` · `updated_at` · `deleted_at`
+- **photo** `id` · `album_id` · `position` · `width`/`height` (of the 2400 variant, 1–2400) · `alt` ≤ 200 ·
+  `lqip` ≤ 2000 chars · `featured` bool · `featured_position` · `created_at` · `deleted_at`
 
-CREATE TABLE photos (
-  id                TEXT PRIMARY KEY,
-  album_id          TEXT NOT NULL REFERENCES albums(id),
-  position          INTEGER NOT NULL,
-  width             INTEGER NOT NULL CHECK (width  BETWEEN 1 AND 2400),   -- of the 2400 variant
-  height            INTEGER NOT NULL CHECK (height BETWEEN 1 AND 2400),
-  alt               TEXT NOT NULL DEFAULT '' CHECK (length(alt) <= 200),
-  lqip              TEXT NOT NULL CHECK (length(lqip) <= 2000),          -- data:image/webp;base64,…
-  featured          INTEGER NOT NULL DEFAULT 0 CHECK (featured IN (0,1)),
-  featured_position INTEGER,
-  created_at        TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
-  deleted_at        TEXT
-);
-CREATE INDEX idx_photos_album    ON photos(album_id, deleted_at, position);
-CREATE INDEX idx_photos_featured ON photos(featured, deleted_at, featured_position);
-
-CREATE TABLE audit_log (
-  id     INTEGER PRIMARY KEY AUTOINCREMENT,
-  at     TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
-  actor  TEXT NOT NULL,
-  action TEXT NOT NULL,          -- album.create, album.update, album.publish, photo.upload, …
-  target TEXT NOT NULL,
-  detail TEXT NOT NULL DEFAULT ''  -- short, never user free text > 200 chars
-);
-CREATE INDEX idx_audit_actor_at ON audit_log(actor, at);
-```
-
-Rules: every mutation bumps `albums.updated_at`; `slug` is assigned inside the same statement
-batch that sets `status='published'` for the first time; soft delete = set `deleted_at`.
+`Store::mutate(fn)` = one exclusive lock, fresh read, `fn(&$state)`, and only when the state changed:
+version + 1, atomic write, snapshot, export, publisher told. An `ApiError` inside leaves the file untouched.
 
 ---
 
-## 4. Bindings and env — `wrangler.jsonc`
+## 4. Config and env
 
-Start from what `npx astro add cloudflare` generates. Add only:
-
-```jsonc
-{
-  "d1_databases": [{ "binding": "DB", "database_name": "ikdirected",
-                     "database_id": "REPLACE_ME", "migrations_dir": "migrations" }],
-  "r2_buckets":   [{ "binding": "MEDIA", "bucket_name": "ikdirected-media" }],
-  "vars": {
-    "SITE_ORIGIN": "https://ikdirected.com",            // TODO(client) real domain
-    "PUBLIC_MEDIA_BASE": "https://media.ikdirected.com",
-    "CF_ACCESS_TEAM_DOMAIN": "https://REPLACE_ME.cloudflareaccess.com",
-    "CF_ACCESS_AUD": "REPLACE_ME",
-    "ADMIN_EMAILS": "REPLACE_ME"                          // comma separated
-  }
-}
-```
-`.dev.vars.example` (committed, names only):
-```
-SITE_ORIGIN=http://localhost:4321
-PUBLIC_MEDIA_BASE=/_dev/media
-DEV_AUTH_BYPASS=1
-DEV_AUTH_EMAIL=dev@example.test
-ADMIN_EMAILS=dev@example.test
-```
-Access `env` via `import { env } from "cloudflare:workers"` (Astro 6). Generate types with
-`npx wrangler types` and commit `worker-configuration.d.ts`.
+On the hosting nothing is configured by hand: `api/konfiguracija.json` (written by `npm run paket`) holds the
+public origin; paths are relative to `api/` (data = `dirname(public_html)/ikdirected-podaci`).
+Env (local runs and tests only): `IK_PODACI`, `IK_MEDIA`, `IK_JAVNO`, `IK_ORIGIN`, `IK_LOKALNO=1`
+(no Secure cookies, localhost hosts, first setup without the code from 127.0.0.1), `IK_TEST=1` (seed route +
+per-test namespaces via cookie `ik-test-ns`), `IK_GITHUB_API`, `IK_OSVJEZI_MS`.
+Build: `SITE_ORIGIN` (canonical, sitemap), `IK_SADRZAJ` (export path), `PUBLIC_MEDIA_BASE` (default `/media`).
 
 ---
 
-## 5. Request pipeline — `src/middleware.ts` (order matters)
+## 5. Request rules (`App::handle()`)
 
-1. `requestId = crypto.randomUUID()`; start timing.
-2. **Admin gate** — if path starts with `/admin` or `/api/admin`:
-   a. `verifyAccess(request, env)` (SECURITY.md §3). Fail → API 401 JSON / HTML 403 page.
-   b. email must be in `ADMIN_EMAILS` (case-insensitive, trimmed). Fail → 403.
-   c. Mutating method (POST/PUT/PATCH/DELETE) → `Origin` must equal `SITE_ORIGIN` **and**
-      `Sec-Fetch-Site` must be `same-origin` when present. Fail → 403 `ORIGIN`.
-   d. `locals.user = { email }`.
-3. **Edge cache** — public `GET` only, no `CF_Authorization` cookie, status 200 → `caches.default`
-   (§10).
-4. Call `next()`.
-5. **Headers** — apply `publicHeaders` or `adminHeaders` (SECURITY.md §4) to every response,
-   including errors and 404s. Add `X-Request-Id`.
-6. Errors are caught once here → JSON `{ error: { code, message } }` for `/api/*`, HTML error
-   page otherwise. Never include stack, SQL, or input echo. Log `requestId`, path, code.
+1. Methods GET HEAD POST PUT PATCH DELETE only; `Host` must be the site (or localhost when local) → else 421.
+2. Mutating requests: `Origin` = site **and** `Sec-Fetch-Site: same-origin` when present → else 403 `ORIGIN`.
+3. Signed-in routes: session file valid (30 min idle, 12 h max), user exists, same `sessionVersion`
+   → else 401 `UNAUTHORIZED {reason}`; mutating ones also need `X-CSRF` = session token → else 403 `FORBIDDEN`.
+4. JSON bodies: `application/json`, an object, size-capped; unknown keys → 400.
+5. Every answer: API headers (`App::headers()`), `Cache-Control: no-store`. Errors `{error:{code,message,…}}`;
+   internal errors are 500 `INTERNAL` with no detail (logged server-side).
+6. After the answer is sent: publish what waits (20 s quiet), purge the trash at most hourly.
 
 ---
 
-## 6. API contract (all under `/api/admin`, JSON unless noted, all require §5 gate)
+## 6. API contract (all under `/api/admin`)
+
+Content (signed in; mutating = CSRF). Unchanged from the front-end contract:
 
 | Method | Path | Body | Success | Errors |
 |---|---|---|---|---|
 | GET | /albums | – | 200 `{albums: AlbumCard[], trash: AlbumCard[]}` | |
 | POST | /albums | `{category?}` | 201 `Album` | 400 |
 | GET | /albums/:id | – | 200 `Album & {photos: Photo[]}` | 404 |
-| PATCH | /albums/:id | `{title?,category?,place?,event_date?,story?,status?,cover_photo_id?}` | 200 `Album` | 400, 404, 409 `PUBLISH_BLOCKED` |
+| PATCH | /albums/:id | `{title?,category?,place?,event_date?,story?,status?,cover_photo_id?}` | 200 `Album` | 400, 404, 409 `PUBLISH_BLOCKED {reason}` |
 | DELETE | /albums/:id | – | 204 | 404 |
-| POST | /albums/:id/restore | – | 200 `Album` | 404, 409 (purged) |
+| POST | /albums/:id/restore | – | 200 `Album` | 404, 409 (older than 7 days) |
 | POST | /albums/:id/photos | multipart (§8.3) | 201 `Photo` | 400, 404, 409 `ALBUM_FULL`, 413, 415, 422, 429 |
-| PUT | /albums/:id/order | `{ids: string[]}` exact live set | 204 | 400 (set mismatch), 404 |
+| PUT | /albums/:id/order | `{ids}` exact live set | 204 | 400, 404 |
 | PATCH | /photos/:id | `{alt?, featured?}` | 200 `Photo` | 400, 404, 409 `FEATURED_FULL` |
 | DELETE | /photos/:id | – | 204 | 404 |
-| POST | /photos/:id/restore | – | 200 `Photo` (original position, shifts others) | 404 |
+| POST | /photos/:id/restore | – | 200 `Photo` (original position) | 404 |
 | GET | /featured | – | 200 `{photos: FeaturedPhoto[]}` | |
-| PUT | /featured/order | `{ids: string[]}` exact featured set | 204 | 400 |
+| PUT | /featured/order | `{ids}` exact featured set | 204 | 400 |
 
-Types live in `src/lib/db/types.ts`; zod schemas in `src/lib/validation/schemas.ts` are the single
-source (`z.infer`). Unknown keys → 400 (`.strict()`). IDs must match UUID v4 regex before any query.
-Error codes: `VALIDATION UNAUTHORIZED FORBIDDEN ORIGIN NOT_FOUND CONFLICT PUBLISH_BLOCKED
-FEATURED_FULL ALBUM_FULL UNSUPPORTED_MEDIA TOO_LARGE DIMENSION_MISMATCH RATE_LIMITED INTERNAL`.
+Sign-in and accounts:
 
-Every successful mutation writes one `audit_log` row: `actor=locals.user.email`.
+| Method | Path | Body | Notes |
+|---|---|---|---|
+| GET | /auth/state | – | `{step: in\|2fa\|setup-2fa\|null, name, role, csrf, reason, firstSetup, codeRequired?}` |
+| POST | /auth/setup | `{code?, name, password}` | first account only (admin); → `{step: setup-2fa, uri, key}` |
+| POST | /auth/login | `{name, password}` | → `{step: 2fa}` or setup-2fa; same 401 for unknown user and wrong password |
+| POST | /auth/login/2fa | `{code}` | TOTP or a recovery code → `{step: in, name, role, csrf}` |
+| POST | /auth/2fa/confirm | `{code}` | → signed in + `recoveryCodes` (shown once) |
+| POST | /auth/invite/check, /auth/invite | `{token}`, `{token, password}` | invite link `/admin#pozivnica=<token>`, 72 h, single use |
+| POST | /auth/logout | – | |
+| POST | /auth/password | `{old, new}` | signs out other sessions |
+| GET/POST | /users, /users/invite `{name, reset?}`, /users/remove `{name}` | | administrator only |
+| GET | /publish | – | `{state: unconfigured\|ready\|building\|error, published, message, pending}` |
+| POST | /publish/now | – | publish without waiting for the quiet window |
+| GET/POST | /publish/settings | `{repo, branch, token}` | administrator only; token never returned |
+| GET | /osvjezi | – | public: install the newest build of this repo (postavi.yml, Cron) |
 
-**Handler pattern (testability):** each file in `src/pages/api/admin/**` is a 3-line wrapper that
-calls a handler in `src/lib/api/*.ts` with signature
-`(req: Request, env: Env, user: { email: string }, params) => Promise<Response>`.
-Integration tests call handlers directly inside the Workers test pool with real local D1/R2;
-the same goes for `adminGate(req, env, isDev)` from middleware. E2E covers the wiring.
+Error codes: `VALIDATION UNAUTHORIZED FORBIDDEN ORIGIN NOT_FOUND CONFLICT PUBLISH_BLOCKED FEATURED_FULL
+ALBUM_FULL UNSUPPORTED_MEDIA TOO_LARGE DIMENSION_MISMATCH RATE_LIMITED INTERNAL`.
+Every successful mutation writes one audit line (actor = user name).
 
 ---
 
@@ -231,7 +187,7 @@ Invariants to test: flatten(rows) preserves input order and count; deterministic
 width: wide → `min(38vw, 88vw)`, tall → `min(22vw, 72vw)`, square → `min(29vw, 84vw)`;
 vertical offset cycles `[-4, 6, -8, 4, -6, 8, -3, 5]` vh by index. Aspect ratio from real dims.
 Implement as classes (`.t-wide .t-tall .t-square`, offsets via `:nth-child(8n+k)`) and `width`/
-`height` attributes — **not** inline `style` (SECURITY §4). Same for rhythm rows (`.r-full`, `.r-pair-a`, …).
+`height` attributes — **not** inline `style` (SECURITY §4). Same for rhythm rows.
 
 ---
 
@@ -242,96 +198,81 @@ Implement as classes (`.t-wide .t-tall .t-square`, offsets via `:nth-child(8n+k)
    size ≤ 60 MB; batch ≤ 200 files.
 2. Decode in a Web Worker when `OffscreenCanvas` exists, else main thread:
    `createImageBitmap(file, { imageOrientation: "from-image" })`. Failure → `up.err.decode`.
-3. For targets `[2400, 1280, 640]` (long edge, never upscale): draw with
-   `imageSmoothingQuality="high"`, encode `convertToBlob({type:"image/webp", quality:.86})`
-   (640: .8). If a variant exceeds its server byte cap (§8.2), re-encode at quality −.06
-   (max 3 steps) before giving up with `up.err.server`.
-   **If the returned `blob.type !== "image/webp"`** (older Safari), lazy-load
-   `@jsquash/webp` (WASM) and encode `ImageData` with it. Admin bundle only.
-4. LQIP: long edge 16 px, WebP q .5 → base64 data URI (≤ 1 KB typical, hard cap 2000 chars).
-5. Record `w,h` of the 2400 variant. Build `FormData` (§8.3). `XMLHttpRequest` for progress
-   events (fetch has no upload progress). Retry once on network error with 2 s backoff.
-6. Show local `URL.createObjectURL(v640)` thumbnail immediately; revoke on unmount.
+3. For targets `[2400, 1280, 640]` (long edge, never upscale): draw with `imageSmoothingQuality="high"`,
+   encode WebP (quality .86, 640: .8); over a byte cap → re-encode −.06 (max 3 steps).
+   If `blob.type !== "image/webp"` (older Safari): lazy-load `@jsquash/webp` (WASM).
+4. LQIP: long edge 16 px, WebP q .5 → data URI (hard cap 2000 chars).
+5. Record `w,h` of the 2400 variant; `FormData` (§8.3) over `XMLHttpRequest` (progress).
+6. Show `URL.createObjectURL(v640)` immediately; revoke on unmount.
 
-### 8.2 Server (`POST /albums/:id/photos`)
-Order: gate (§5) → rate limit (≤ 1500 uploads / actor / 24h via audit_log count → 429) →
-`Content-Length` ≤ 4 MB else 413 → `formData()` → field set must be exactly
-`meta, v2400, v1280, v640` → zod `meta` → per file: byte caps (2400 ≤ 2 MB, 1280 ≤ 700 KB,
-640 ≤ 220 KB) → `parseWebp(bytes)` (§8.4) → dims: long edge of each = min(target, meta long edge),
-aspect of all three within 1 % of meta, 2400 dims == meta dims → album exists, not deleted,
-live photo count < 400 → `id = crypto.randomUUID()` → `MEDIA.put` ×3 (§9 keys/metadata) →
-D1 insert (position = max+1; set cover if null) → audit → 201. If the D1 insert fails after R2
-puts, delete the three objects (best effort) before returning 500.
+### 8.2 Server (`POST /albums/:id/photos`, `App::upload()` + `check_upload()`)
+Order: signed in + CSRF → upload limit (1500 / user / 24 h → 429) → `Content-Length` ≤ 4 MB else 413 →
+multipart → field set exactly `meta, v2400, v1280, v640` → meta `{w,h,lqip}` → per file byte caps
+(2400 ≤ 2 MB, 1280 ≤ 700 KB, 640 ≤ 220 KB) → `parse_webp()` (§8.4) → dims: long edge of each =
+min(target, meta long edge), aspect within 1 % of meta, 2400 dims == meta dims → album exists, not deleted,
+live photos < 400 → new UUID → write the three files to a temp folder and rename it into place →
+`Store::mutate` adds the row (position = max + 1; cover if none) → audit → 201. If the row cannot be added,
+the media folder is removed.
 
 ### 8.3 Multipart fields
-`meta` = JSON `{w:int, h:int, lqip:string}`; `v2400`, `v1280`, `v640` = `Blob` (`image/webp`).
-The server ignores filenames and client `type` entirely.
+`meta` = JSON `{w:int, h:int, lqip:string}`; `v2400`, `v1280`, `v640` = files. The server ignores file names
+and client types entirely.
 
-### 8.4 `parseWebp(bytes) → {width, height} | Error` — `src/lib/media/webp.ts`
-- bytes[0..3] == "RIFF", bytes[8..11] == "WEBP", little-endian RIFF size + 8 == length (± 1 pad).
-- Chunk at 12: `"VP8 "` → start code `9D 01 2A` at 23..25; width = u16le@26 & 0x3FFF, height = u16le@28 & 0x3FFF.
-- `"VP8L"` → byte 20 == 0x2F; b = u32le@21; width = (b & 0x3FFF)+1; height = ((b>>14) & 0x3FFF)+1.
-- `"VP8X"` → flags byte 20: **reject if animation (0x02), EXIF (0x08) or XMP (0x04) bit set**;
-  width = u24le@24 + 1; height = u24le@27 + 1.
-- Anything else → `UNSUPPORTED_MEDIA`. Width/height 0 or > 2400 → `DIMENSION_MISMATCH`.
-Fixtures for every branch in tests/fixtures (TESTING.md §4).
+### 8.4 `parse_webp(bytes)` — `api/lib/media.php`
+- `RIFF` … `WEBP`, little-endian RIFF size + 8 == length (± 1 pad) — so nothing can be appended.
+- First chunk `VP8 ` (start code `9D 01 2A`, 14-bit dims), `VP8L` (signature 0x2F, 14-bit dims + 1) or
+  `VP8X` (**reject animation 0x02, XMP 0x04, EXIF 0x08 flags**; 24-bit dims + 1).
+- Every chunk is walked: only `VP8X ICCP ALPH VP8  VP8L`, sizes inside the file, exactly one image bitstream.
+- Anything else → 415 `UNSUPPORTED_MEDIA`; width/height 0 or > 2400 → 422 `DIMENSION_MISMATCH`.
 
 ---
 
 ## 9. Media serving
 
-- Bucket `ikdirected-media`, public **only** via custom domain `media.<domain>` (r2.dev disabled).
-- Keys: `p/{photoId}/2400.webp`, `p/{photoId}/1280.webp`, `p/{photoId}/640.webp`. photoId is a
-  UUID we generated — never user input.
-- `put` options: `httpMetadata: { contentType: "image/webp", cacheControl: "public, max-age=31536000, immutable", contentDisposition: "inline" }`.
-- Response headers on the media domain via a Cloudflare Transform Rule (SETUP.md): `X-Content-Type-Options: nosniff`, `Content-Security-Policy: default-src 'none'; sandbox`, `Cross-Origin-Resource-Policy: cross-origin`.
-- LQIP renders as `<img class="lqip" src="data:image/webp;base64,…" alt="" aria-hidden="true">`
-  underneath the real image (blurred via CSS `filter: blur(20px)`), removed after `decode()`.
-- `srcset(photoId)` → `${BASE}/p/${id}/640.webp 640w, …1280w, …2400w`; `sizes` per component
-  (track: `(max-width: 900px) 84vw, 38vw`; rhythm full: `100vw`; card: `(max-width: 640px) 100vw, 33vw`).
-- **Dev only:** `src/pages/_dev/media/[...key].ts` streams from the `MEDIA` binding when
-  `import.meta.env.DEV`; in production it must return 404 (test `SEC-DEV-01`). `PUBLIC_MEDIA_BASE=/_dev/media` in `.dev.vars`.
+- Files: `public_html/media/p/{photoId}/{2400,1280,640}.webp`; photoId is a UUID the server generated.
+- `media/.htaccess`: only that pattern exists (everything else 404); `X-Content-Type-Options: nosniff`,
+  `Content-Security-Policy: default-src 'none'; sandbox`, `Cross-Origin-Resource-Policy: same-origin`,
+  `Content-Disposition: inline`, `Cache-Control: public, max-age=31536000, immutable`; no handler runs there
+  (PHP and CGI removed, scripts and HTML denied).
+- Same origin as the site (a separate subdomain would add DNS/SSL steps on shared hosting for little gain:
+  the bytes are a parsed plain WebP under a server-chosen name, SECURITY §7).
+- `srcset` = `640w, 1280w, 2400w` with the real intrinsic widths (never upscaled); LQIP `<img>` underneath.
+- Drafts' photos are reachable only by their unguessable UUID URL (same as before).
 
 ---
 
-## 10. Public caching
+## 10. Publishing (`api/lib/publish.php`, `install.php`, `.github/workflows/`)
 
-`src/lib/http/cache.ts`: for public GET 200 responses set
-`Cache-Control: public, max-age=0, s-maxage=120, stale-while-revalidate=600` and store in
-`caches.default` (custom domain only; no-op on workers.dev/local). Bypass when the request carries
-a `CF_Authorization` cookie so the photographer sees changes instantly. Admin, API and 4xx/5xx
-are `no-store`. Worst-case staleness for visitors after a publish: 2 minutes (acceptable, in SPEC).
-
----
-
-## 11. Purge worker — `workers/purge/`
-
-Separate tiny Worker (no Astro), same `DB` and `MEDIA` bindings, cron `17 3 * * *`.
-1. Photos with `deleted_at < now-7d` (or whose album has) → `MEDIA.delete([3 keys])` → delete rows.
-2. Albums with `deleted_at < now-7d` and no remaining photos → delete rows.
-3. `audit_log` rows older than 365 days → delete.
-Batch 100 per run step; idempotent; logs counts only. Integration-tested with miniflare.
+1. Every change marks the export pending. The next signed-in request after 20 s of quiet (the admin polls
+   `/publish` every 10 s) or "Objavi sada" pushes **only** `sadrzaj/sadrzaj.json` (the public export) as one
+   commit to branch `sadrzaj` and sends `repository_dispatch sadrzaj`. Never during a running build; changes
+   made meanwhile wait for the next one.
+2. `objava.yml` (`publish` job, needs `OBJAVA_UKLJUCENA = da`): main + that file → `npm run build` →
+   `npm run paket` → artifact `hosting`. Without the branch: an empty export (never demo content).
+   Push to main runs `npm run gate` first.
+3. The status poll (≤ every 8 s while building) or `/osvjezi` (postavi.yml, Cron) finds the run, downloads the
+   artifact (the token is not sent to the storage redirect) and installs it: assets → `api/` → HTML/XML/TXT →
+   `.htaccess` last; then removes files listed in the previous `.ik-paket.json` and not in the new one
+   (deleted albums). Never `media/*` (except its `.htaccess`), never `.well-known/`, only plain relative names.
+4. Public static pages are `Cache-Control: no-cache` (revalidate); `_astro/*` immutable.
 
 ---
 
-## 12. Queries worth copying
+## 11. Purge (`Content::purge`, at most hourly after a signed-in request)
 
-Feature a photo atomically (cap 12) — check `meta.changes === 1`, else 409 `FEATURED_FULL`:
-```sql
-UPDATE photos
-SET featured = 1,
-    featured_position = (SELECT COALESCE(MAX(featured_position),0)+1 FROM photos WHERE featured=1 AND deleted_at IS NULL)
-WHERE id = ?1 AND deleted_at IS NULL AND featured = 0
-  AND (SELECT COUNT(*) FROM photos WHERE featured=1 AND deleted_at IS NULL) < 12;
-```
-Home track (featured from published albums), then fallback covers in code if < 4:
-```sql
-SELECT p.*, a.slug, a.title, a.place FROM photos p JOIN albums a ON a.id = p.album_id
-WHERE p.featured=1 AND p.deleted_at IS NULL AND a.status='published' AND a.deleted_at IS NULL
-ORDER BY p.featured_position LIMIT 12;
-```
-Reorder = one `DB.batch([...UPDATE photos SET position=?1 WHERE id=?2 AND album_id=?3])` after
-verifying the submitted id set equals the live set.
+Photos deleted > 7 days ago, and albums deleted > 7 days ago with all their photos, are removed from the store;
+their media folders are deleted; a purged album's slug goes to `retired_slugs` and is never given out again.
+The audit log rotates by size (≈ 2 MB total).
+
+---
+
+## 12. Local runs
+
+- `npm run dev`: Astro dev (public + admin with hot reload) and `php -S :8787 scripts/dev-router.php`
+  (proxied `/api`, `/media`); admin data in `.local/`. `npm run build:local && npm run preview` shows the
+  public site built from that local data.
+- `scripts/dev-router.php` emulates `public/.htaccess`, `media/.htaccess`, `api/.htaccess` — the security
+  headers are read from the built `.htaccess` files. Keep the router and the `.htaccess` files in step.
 
 ---
 
@@ -340,20 +281,15 @@ verifying the submitted id set equals the live set.
 Typed object with every business fact the templates print: brand, person name, email, phone,
 address, geo, service list with prices, FAQ (q/a), category SEO intros, social links, area list.
 Every value copied from the reference that is **not verified** keeps a `// TODO(client)` comment
-on its line. Reference prices, phone, email, person name, client names in captions, the review
-quote — all unverified. `tests/unit/release-gate.test.ts` (AC-REL-01) greps this file.
+on its line. `tests/unit/release-gate.test.ts` (AC-REL-01) greps this file.
 
 ---
 
-## 14. Seed and fixtures
+## 14. Fixtures and demo content
 
-- `scripts/make-fixtures.mjs` (devDependency `sharp`, scripts only — never imported by `src/`)
-  writes `tests/fixtures/`: valid VP8, VP8L, VP8X WebPs at exact sizes; a VP8X with EXIF flag;
-  an animated WebP; a JPEG renamed `.webp`; an SVG; a PNG with appended PHP payload; a
-  RIFF-size-lies WebP; a 2401-px WebP; truncated file; zero-byte file.
-- `scripts/seed.mjs`: creates 9 albums across 4 categories (2 drafts, 1 soft-deleted), ~60 photos
-  using generated gradient WebPs with varied aspect ratios, 6 featured. Writes local D1
-  (`wrangler d1 execute ikdirected --local --file …`) and local R2
-  (`wrangler r2 object put ikdirected-media/<key> --file … --local`). **Every wrangler call in
-  scripts must pass `--local`** — `r2 object put` targets the real bucket without it. Titles/places are obviously fake ("Testni album 3",
-  "Mjesto A") — never realistic invented clients.
+- `scripts/make-fixtures.mjs` writes `tests/fixtures/`: valid VP8/VP8L/VP8X triples, EXIF/XMP/animated WebPs,
+  JPEG-as-WebP, SVG, PNG polyglot, appended payload, RIFF-size lie, truncated, 2401 px, empty, LQIP, and the
+  camera JPEG with GPS + Orientation=6. Placeholders in `public/placeholder` (real photos since
+  `scripts/import-photos.mjs`) are only rebuilt with `--force`.
+- `src/lib/data/mock.ts`: demo content (33 albums, titles "Testni album N", places "Mjesto A") for builds
+  without an export and for the e2e seed — never realistic invented clients.

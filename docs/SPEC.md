@@ -36,7 +36,7 @@ spec is out of scope (no blog, no client proofing, no shop, no multi-user roles,
 ### Archive `/radovi`  (DESIGN.md §5.2)
 - AC-ARC-01 Lists all published albums, newest event date first, grouped under year dividers.
 - AC-ARC-02 Filter chips: Sve · Vjenčanja · Eventi · Portreti · Iz zraka, each with its count. Chips are real links (`/radovi`, `/radovi/vjencanja`, …) — filtering works without JS.
-- AC-ARC-03 24 albums per page. Pagination via `?stranica=N` real links; with JS a "Učitaj još" button appends the next page in place and updates the URL (history.replaceState). Invalid `stranica` → 404.
+- AC-ARC-03 24 albums per page. Pagination via real links `/radovi/stranica/N` (and `/radovi/{kategorija}/stranica/N`); with JS a "Učitaj još" button appends the next page in place and updates the URL (history.replaceState). Pages that do not exist (incl. `/stranica/1`) → 404.
 - AC-ARC-04 Text search field "Traži po mjestu ili nazivu" filters the already-loaded list client-side (progressive enhancement; hidden without JS).
 - AC-ARC-05 Card shows cover, title, place, month/year, photo count. On hover (fine pointer only) crossfades to the album's 2nd photo.
 - AC-ARC-06 Empty state for a category with no albums: text + link back to "Sve".
@@ -60,9 +60,9 @@ spec is out of scope (no blog, no client proofing, no shop, no multi-user roles,
 ## 4. Admin `/admin`
 
 ### Access
-- AC-ADM-01 Every `/admin*` and `/api/admin*` request requires a valid Cloudflare Access JWT (verified in code, not just at the edge). Missing/invalid → 401 for API, 403 page for HTML.
-- AC-ADM-02 Allowed identities come from env `ADMIN_EMAILS` (comma list). Valid JWT but email not listed → 403.
-- AC-ADM-03 Header shows signed-in email and "Odjava" (links to `/cdn-cgi/access/logout`).
+- AC-ADM-01 Every `/api/admin*` content request requires a full session: password **and** a code from the phone (TOTP) or a single-use recovery code. Missing/expired → 401; the admin pages then show sign-in and no data. First account: setup code from the hosting file `PRVO-POSTAVLJANJE.txt`.
+- AC-ADM-02 Accounts exist only by invite from the administrator (link valid 72 h, single use). Users and publish settings are administrator-only (others → 403).
+- AC-ADM-03 Header shows the signed-in user (menu: Promijeni lozinku, Korisnici, Objava stranice), the publish status ("Stranica je ažurna" / "Čeka objavu" + "Objavi sada" / "Objavljujem…" / "Objava nije uspjela") and "Odjava".
 - AC-ADM-04 Admin pages send `noindex`, `Cache-Control: no-store`, and are excluded in robots.txt.
 
 ### Screen 1 — Albumi `/admin`

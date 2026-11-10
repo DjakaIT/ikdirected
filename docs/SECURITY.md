@@ -2,185 +2,162 @@
 
 If anything elsewhere conflicts with this file, this file wins.
 
-Sections: 1 Threat model · 2 Access setup assumptions · 3 JWT verification · 4 Headers ·
-5 Input/output rules · 6 Required tests · 7 Upload controls · 8 Dependencies & config ·
-9 Privacy · 10 Operations
+Sections: 1 Threat model · 2 Sign-in · 3 Sessions and CSRF · 4 Headers · 5 Input/output rules ·
+6 Required tests · 7 Upload controls · 8 Dependencies & config · 9 Privacy · 10 Operations
+
+Hosting since 2026-11-10: Hostinger (static site + PHP admin API, ARCHITECTURE §1). The sign-in core is the one
+from CamelliaSinensis/Septillion, ported and tested here against the real PHP.
 
 ---
 
 ## 1. Threat model
 
-Assets: the photographer's published reputation (site integrity), unpublished albums, client
-photos (privacy — faces, locations), her admin session, Daniel's Cloudflare account.
+Assets: the photographer's published reputation (site integrity), unpublished albums, client photos (privacy —
+faces, locations), her admin session, the GitHub token (write access to the content branch), the hosting account.
 
 | # | Threat | Mitigation | Test |
 |---|---|---|---|
-| T1 | Anyone reaches `/admin` or `/api/admin` | Cloudflare Access at edge **and** JWT verified in middleware; `workers_dev: false` so the `*.workers.dev` hostname cannot bypass Access | SEC-AUTH-01..05 |
-| T2 | Forged / replayed / wrong-app token | RS256 only, JWKS from team domain, `iss` + `aud` + `exp` + `nbf` checked, 60 s leeway | SEC-AUTH-02/03 |
-| T3 | Logged-in browser tricked into a mutation (CSRF) | Origin == SITE_ORIGIN and Sec-Fetch-Site same-origin on every mutating request; JSON bodies only (except upload multipart); Access cookie is SameSite | SEC-CSRF-01 |
-| T4 | Malicious file upload (web shell, stored XSS via SVG, polyglot) | Client re-encodes to WebP; server accepts **only** structurally valid WebP by magic bytes + chunk parse; no SVG ever; random keys; served from separate origin with nosniff + sandbox CSP; never decoded or executed server-side | SEC-UP-01..10 |
-| T5 | Stored XSS through titles, places, alt, story | Astro auto-escaping, no `set:html` with data, JSON-LD serialised with `<` → `<`, strict CSP without `unsafe-inline` scripts | SEC-XSS-01 |
-| T6 | SQL injection | Only prepared statements with `.bind()`; identifiers never from input | SEC-SQL-01 |
-| T7 | IDOR / mass assignment | zod `.strict()` bodies; ids validated as UUID; ownership checks (photo ∈ album) on order/restore | SEC-IDOR-01 |
-| T8 | Draft/unpublished content leak | Public queries always filter `status='published' AND deleted_at IS NULL`; drafts 404 identically to unknown | SEC-ENUM-01 |
-| T9 | Location leak from photo EXIF/GPS | Canvas re-encode strips metadata; server rejects VP8X with EXIF/XMP flags | SEC-UP-06 |
-| T10 | Dev auth bypass shipped to prod | Bypass requires `import.meta.env.DEV` **and** `DEV_AUTH_BYPASS=1` **and** hostname localhost/127.0.0.1 **and** cookie `dev_auth=1` (set only by e2e admin fixtures) | SEC-DEV-01 |
-| T11 | Abuse from a stolen session (storage fill) | 1500 uploads/actor/24 h; album cap 400; soft delete 7 days; audit log | SEC-RATE-01 |
-| T12 | Information disclosure in errors | Uniform error JSON, no stack/SQL/input echo; request id only | SEC-ERR-01 |
-| T13 | Clickjacking, MIME sniffing, referrer leaks | Headers §4 on every response | SEC-HDR-01 |
-| T14 | Vulnerable dependency (e.g. Astro image endpoint CVEs) | `@astrojs/cloudflare` ≥ 13.1.10; image endpoint not used (passthrough service, no remote patterns); `npm audit` in CI | CI |
+| T1 | Anyone reaches the admin API | Every route except sign-in and `/osvjezi` needs a full session (password **and** TOTP); the static admin shell holds no data | SEC-AUTH-01, SEC-AUTH-05 |
+| T2 | Password guessing / credential stuffing | Argon2id; 5 failures / user / 15 min, 20 / IP, 200 overall → 429 without checking; same answer for unknown user and wrong password; dummy hash so timing matches | auth tests |
+| T3 | Stolen password | TOTP (RFC 6238, a step is never accepted twice); single-use recovery codes stored as SHA-256 | auth tests |
+| T4 | Session theft / fixation | 256-bit random id in an HttpOnly SameSite=Strict `__Host-` Secure cookie; server stores only its SHA-256; new id on every sign-in step; 30 min idle, 12 h max; password change/reset/removal bumps `sessionVersion` (signs out everywhere) | auth tests |
+| T5 | Logged-in browser tricked into a mutation (CSRF) | Origin == site and Sec-Fetch-Site same-origin on every mutating request, **and** the session's `X-CSRF` token; SameSite=Strict cookie | SEC-CSRF-01/02 |
+| T6 | First setup hijacked on a fresh install | Setup needs the code in `PRVO-POSTAVLJANJE.txt` outside `public_html` (only the hosting owner can read it); one-time | — (manual, SETUP §5) |
+| T7 | Malicious file upload (web shell, stored XSS via SVG, polyglot) | Client re-encodes to WebP; server accepts **only** structurally valid still WebP (chunk walk, size field must match length); no SVG ever; server-generated UUID paths; `media/.htaccess` allows only `p/<uuid>/<variant>.webp`, removes every handler, `nosniff` + `sandbox` CSP; never decoded or executed server-side | SEC-UP-01..10 |
+| T8 | Draft / deleted content leak | Only the public export (published, live) leaves the hosting and is built; unknown, draft and deleted slugs are the same static 404; an install removes pages of deleted albums | SEC-ENUM-01, publish tests |
+| T9 | Stored XSS through titles, places, alt, story | Astro auto-escaping, no `set:html` with data, JSON-LD `<` → `<`, CSP without `unsafe-inline` scripts (hashes) | SEC-XSS-01 |
+| T10 | IDOR / mass assignment | Strict key sets; ids checked as UUID; reorder needs exactly the live set of that album | SEC-IDOR-01 |
+| T11 | Location leak from photo EXIF/GPS | Canvas re-encode strips metadata; server rejects VP8X with EXIF/XMP flags or chunks | SEC-UP-06, AC-UP-03 |
+| T12 | Path traversal / file overwrite | No path from user input (UUIDs we generated, checked); install accepts only plain relative names and never writes `media/*` or outside `public_html` | publish tests |
+| T13 | Malicious or broken build package | Only successful `objava.yml` runs on `main` of the configured repository; artifact download never forwards the token; size and file-count caps | publish tests |
+| T14 | GitHub token leak | Fine-grained, one repository, Contents RW + Actions R, expiring; stored only in the data folder (mode 600, outside `public_html`); never returned to the browser | publish tests |
+| T15 | Abuse from a stolen session (storage fill) | 1500 uploads / user / 24 h; album cap 400; soft delete 7 days; audit log | SEC-RATE-01 |
+| T16 | Information disclosure in errors | Uniform `{error:{code,message}}`, 500 `INTERNAL` with no detail; `display_errors` off; `X-Powered-By` removed | SEC-ERR-01 |
+| T17 | Clickjacking, MIME sniffing, referrer leaks | Headers §4 from `.htaccess` on every response | SEC-HDR-01 |
+| T18 | Test-only code active on the hosting | Seed route and namespaces need `IK_LOKALNO=1` **and** `IK_TEST=1` env vars, which the hosting never sets; `scripts/dev-router.php` is not in the package | — (package content, SETUP) |
+| T19 | Vulnerable dependency | Exact pins, `npm audit --omit=dev --audit-level=high` in CI; PHP uses only built-in functions | CI |
 
 ---
 
-## 2. Cloudflare Access assumptions (configured by Daniel, SETUP.md)
+## 2. Sign-in (`api/lib/passwords.php`, `users.php`, `app.php`)
 
-- Self-hosted application covering **both** `ikdirected.com/admin*` and `ikdirected.com/api/admin*`.
-- Policy: Allow → Emails → the photographer + Daniel. Identity: One-time PIN (email).
-- Session duration 24 h. `workers_dev: false` and preview URLs disabled in `wrangler.jsonc`.
-- Code must not assume the edge did its job — §3 runs on every admin request regardless.
+- Passwords: Argon2id (m = 19 MiB, t = 2, p = 1), NFKC-normalised; bcrypt over SHA-256 only if Argon2 is missing.
+  Rules: ≥ 12 characters, ≤ 200, ≥ 5 different characters, not containing the user name or a common password.
+- TOTP: SHA-1, 6 digits, 30 s, ±1 step, last used step stored (no replay). Recovery: 8 codes, single use.
+- Roles: the first account is `admin` (invites, removes, publish settings); invited accounts are `urednik`.
+- Invites: 256-bit token, stored as SHA-256, 72 h, single use; reset = new password + 2FA, signs out everywhere.
 
----
+## 3. Sessions and CSRF (`api/lib/sessions.php`, `App::signedIn()`)
 
-## 3. JWT verification — `src/lib/auth/access.ts`
-
-```ts
-import { createRemoteJWKSet, jwtVerify } from "jose";
-let jwks: ReturnType<typeof createRemoteJWKSet> | undefined;   // module-level cache, JWKS rotates ~6 weeks
-
-export async function verifyAccess(req: Request, env: Env, isDev: boolean) {
-  if (isDev && env.DEV_AUTH_BYPASS === "1" && isLocalHost(new URL(req.url).hostname)
-      && hasCookie(req, "dev_auth", "1"))                          // all four, or no bypass
-    return { email: env.DEV_AUTH_EMAIL };                        // SEC-DEV-01 guards this
-  const token = req.headers.get("cf-access-jwt-assertion");      // header, not the cookie
-  if (!token) throw unauthorized();
-  jwks ??= createRemoteJWKSet(new URL(`${env.CF_ACCESS_TEAM_DOMAIN}/cdn-cgi/access/certs`));
-  const { payload } = await jwtVerify(token, jwks, {
-    issuer: env.CF_ACCESS_TEAM_DOMAIN, audience: env.CF_ACCESS_AUD,
-    algorithms: ["RS256"], clockTolerance: 60,
-  });
-  const email = String(payload.email ?? "").trim().toLowerCase();
-  if (!email) throw unauthorized();
-  if (!allowlist(env.ADMIN_EMAILS).has(email)) throw forbidden();
-  return { email };
-}
-```
-`isDev` is passed from `import.meta.env.DEV` by middleware (so tests can drive both branches).
-Tests generate an RSA key pair, expose a JWKS through the pool-workers fetch mock, and sign
-tokens with jose — including an `alg: none` token and an HS256 token signed with the public key.
+- Cookie `__Host-ik-admin` (production: Secure, Path=/, HttpOnly, SameSite=Strict). File name = SHA-256 of the id.
+- Steps `2fa` / `setup-2fa` live 5 min; `in` 30 min idle (status polls send `X-Background: 1` and do not count),
+  12 h max. Five wrong codes end the step.
+- Mutations: Origin + Sec-Fetch-Site check (403 `ORIGIN`) before routing, then `X-CSRF` (403 `FORBIDDEN`).
+- `Host` must be the configured site (DNS rebinding) → 421.
 
 ---
 
-## 4. Headers — `src/lib/http/headers.ts` (applied in middleware to every response)
+## 4. Headers (`public/.htaccess`, `media/.htaccess`, `api/.htaccess` + `App::headers()`)
 
-Common:
-```
-Strict-Transport-Security: max-age=31536000; includeSubDomains
-X-Content-Type-Options: nosniff
-Referrer-Policy: strict-origin-when-cross-origin
-Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=(), browsing-topics=()
-Cross-Origin-Opener-Policy: same-origin
-X-Frame-Options: DENY
-```
-Public CSP (use Astro 6's CSP support to hash inline scripts/styles; if something cannot be
-hashed, move it to a file — **never** add `'unsafe-inline'` to `script-src`):
-```
-default-src 'self'; script-src 'self' <hashes>; style-src 'self' <hashes>;
-img-src 'self' data: https://media.<domain>; font-src 'self'; connect-src 'self';
-object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests
-```
-**No server-rendered `style="…"` attributes** on public pages (they would need
-`'unsafe-inline'`, and Astro's style hashes make browsers ignore `'unsafe-inline'` anyway).
-Use classes, `width`/`height` attributes for aspect ratio, and an `<img>` element for LQIP.
-Setting styles from JS through the CSSOM (`el.style.x = …`) is allowed — CSP does not block it.
+Site (every response): `Strict-Transport-Security: max-age=31536000` (`includeSubDomains` once every subdomain
+has HTTPS), `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`,
+`Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=(), browsing-topics=()`,
+`Cross-Origin-Opener-Policy: same-origin`, `X-Frame-Options: DENY`,
+`Content-Security-Policy: frame-ancestors 'none'; base-uri 'none'; object-src 'none'; form-action 'self'`.
 
-Admin CSP = public + `img-src … blob:` + `worker-src 'self' blob:` + `'wasm-unsafe-eval'` in
-`script-src` (WebP WASM fallback). Admin also: `Cache-Control: no-store`,
-`X-Robots-Tag: noindex, nofollow`. API responses: `Content-Type: application/json; charset=utf-8`,
-`Cache-Control: no-store`.
+Page CSP (`<meta>` per page from Astro `security.csp`, hashes of that page's scripts and styles):
+`default-src 'self'; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none';
+form-action 'self'; img-src 'self' data:; script-src 'self' <hashes>; style-src 'self' <hashes>`.
+Never `'unsafe-inline'` in `script-src`. The inline boot script is a constant whose hash is added in
+`Public.astro`. **No server-rendered `style="…"` attributes** on public pages. Setting styles from JS through the
+CSSOM is allowed.
+
+Admin pages: + `img-src … blob:`, `worker-src 'self' blob:`, `'wasm-unsafe-eval'` (WebP WASM fallback);
+`X-Robots-Tag: noindex, nofollow`, `Cache-Control: no-store`.
+API: `application/json; charset=utf-8`, `no-store`, `default-src 'none'` CSP, `noindex`.
+Media: §7.
 
 ---
 
 ## 5. Input and output rules
 
-- Parse every body with zod `.strict()`; reject unknown keys. Trim strings; collapse internal
-  whitespace in title/place; reject control chars (`/[\u0000-\u001F\u007F]/`) except `\n` in story.
+- JSON bodies must be objects with known keys only. Trim strings; collapse internal whitespace in title/place;
+  reject control chars except `\n`.
 - Dates: `YYYY-MM-DD`, real calendar date, between 2000-01-01 and today + 2 years.
 - `status: "published"` only via PATCH, only when publish rules pass (AC-ALBED-03).
-- Slugs are generated server-side only; never accepted from the client.
+- Slugs are generated server-side only (never from the client), never reserved words, never reused after purge.
 - Output: Astro expressions only. JSON-LD: `JSON.stringify(obj).replace(/</g, "\\u003c")`.
 - Never build HTML strings in client scripts from data — use `textContent` / DOM APIs.
-- Never log request bodies, tokens, or cookies.
+- Never log request bodies, passwords, tokens, or cookies (the audit log holds actor, IP, action, target).
 
 ---
 
-## 6. Required tests (IDs go in test titles)
+## 6. Required tests (IDs go in test titles) — `tests/php/*.test.ts` against the real PHP
 
-For **every** `/api/admin` route × method, table-driven: SEC-AUTH-01 (no token → 401),
-SEC-AUTH-04 (not allow-listed → 403), SEC-CSRF-01 (foreign Origin on mutating → 403),
-plus one validation-failure test and one happy path.
+For **every** content route × method, table-driven: SEC-AUTH-01 (no session → 401), SEC-CSRF-01 (foreign
+Origin → 403 ORIGIN), SEC-CSRF-02 (no CSRF token → 403), plus validation failures and a happy path.
 
 | ID | Assertion |
 |---|---|
-| SEC-AUTH-02 | token signed by an unknown key → 401 |
-| SEC-AUTH-03 | wrong aud, wrong iss, expired, nbf in future, `alg:none`, HS256-with-public-key → 401 each |
-| SEC-AUTH-05 | `GET /admin` without token → 403 HTML page that contains no album data |
-| SEC-DEV-01 | bypass ignored when `isDev=false`; ignored for hostname ≠ localhost; ignored without the `dev_auth` cookie; `/_dev/media/*` returns 404 in a production build |
+| SEC-AUTH-05 | `/admin` without a session shows sign-in and no album data (e2e) |
 | SEC-UP-01 | SVG bytes → 415 |
 | SEC-UP-02 | JPEG bytes in a `.webp` part → 415 |
-| SEC-UP-03 | PNG with appended script payload → 415 |
-| SEC-UP-04 | RIFF size field lies → 415 |
+| SEC-UP-03 | PNG with appended script, WebP with appended payload → 415 |
+| SEC-UP-04 | RIFF size field lies, truncated file → 415 |
 | SEC-UP-05 | animated WebP → 415 |
-| SEC-UP-06 | VP8X with EXIF or XMP flag → 415 |
-| SEC-UP-07 | variant over byte cap → 413; Content-Length over 4 MB → 413 |
+| SEC-UP-06 | VP8X with EXIF or XMP → 415 |
+| SEC-UP-07 | variant over byte cap → 413; request over 4 MB → 413 |
 | SEC-UP-08 | dimensions disagree with meta or each other → 422; > 2400 px → 422 |
-| SEC-UP-09 | missing/extra multipart fields → 400 |
-| SEC-UP-10 | stored R2 key matches `^p/[0-9a-f-]{36}/(2400|1280|640)\.webp$` and metadata contentType is image/webp |
-| SEC-SQL-01 | `'; DROP TABLE albums; --` and `" OR 1=1 --` in title/place/story are stored verbatim and tables remain |
-| SEC-XSS-01 | `<script>alert(1)</script>`, `"><img src=x onerror=alert(1)>`, `</script><script>` in title/alt/story render escaped on public page, admin page and inside JSON-LD |
+| SEC-UP-09 | missing/extra multipart fields, bad meta → 400 |
+| SEC-UP-10 | stored under `media/p/<uuid>/<variant>.webp`, served as image/webp with nosniff + sandbox; other paths 404 |
+| SEC-SQL-01 | `'; DROP TABLE albums; --` and `" OR 1=1 --` stored verbatim (no database, but the rule stands) |
+| SEC-XSS-01 | hostile titles/stories stored verbatim; rendering escapes them (Astro) |
 | SEC-IDOR-01 | reorder with a photo id from another album → 400; restore unknown id → 404 |
-| SEC-ENUM-01 | draft album slug and nonexistent slug return byte-identical 404 bodies |
-| SEC-HDR-01 | §4 headers present on `/`, a 404, `/admin`, and an API 400 |
-| SEC-RATE-01 | 1501st upload in 24 h for one actor → 429 |
-| SEC-ERR-01 | forced internal error → 500 JSON with code INTERNAL, no stack/SQL text |
+| SEC-ENUM-01 | draft album slug and nonexistent slug get the same static 404 (e2e) |
+| SEC-HDR-01 | API headers on an API 400; site headers on `/`, a 404, `/admin` (e2e + router reads the shipped `.htaccess`) |
+| SEC-RATE-01 | 1501st upload in 24 h for one user → 429 |
+| SEC-ERR-01 | forced internal error → 500 `{error:{code:INTERNAL,message:"Greška na poslužitelju."}}` only |
+| auth | wrong password = unknown user; TOTP replay refused; recovery code single use; 5 failures → 429 + Retry-After; cookie HttpOnly + SameSite=Strict; password change signs out other sessions; editors cannot manage users; invite single use |
+| publish | export holds only published live content; token never returned; install removes stale pages, keeps media; package with `../` or `media/` paths refused; storage download without token |
 
 ---
 
-## 7. Upload controls (summary — details ARCHITECTURE.md §8)
+## 7. Upload controls (summary — details ARCHITECTURE §8)
 
-Allow-list only WebP on the server · magic bytes + chunk structure parsed · EXIF/XMP/animation
-rejected · byte caps per variant + request cap · dimension caps and cross-checks · random
-server-side keys · object storage on a separate origin · nosniff + sandbox CSP on that origin ·
-never decoded, transformed, or executed server-side · client re-encode removes metadata.
+Allow-list only plain still WebP on the server · RIFF size must equal the length · every chunk walked, only
+image chunks allowed · EXIF/XMP/animation rejected · byte caps per variant + request cap · dimension caps and
+cross-checks · server-side UUID paths · `media/.htaccess`: only the variant pattern, `nosniff`,
+`default-src 'none'; sandbox`, handlers removed, scripts/HTML/SVG denied · never decoded, transformed or executed
+server-side · client re-encode removes metadata. Same origin as the site (ARCHITECTURE §9 says why).
 
 ---
 
 ## 8. Dependencies and config
 
-- Pin exact versions (`save-exact=true` in `.npmrc`). Commit `package-lock.json`.
-- CI: `npm audit --omit=dev --audit-level=high` must pass.
-- `@astrojs/cloudflare` ≥ 13.1.10 (CVE-2025-65019, CVE-2026-41321 class issues in the image
-  endpoint). Configure `image: { service: passthroughImageService() }`, no `remotePatterns`.
-- `wrangler.jsonc`: `"workers_dev": false`, `"preview_urls": false` (if the installed wrangler
-  rejects `preview_urls`, remove it and note in PROGRESS that Daniel disables previews in the dashboard).
-- No secrets exist in this app (Access AUD and team domain are not secret). If one is ever
-  added, it goes in `wrangler secret put` by Daniel, never in the repo.
+- Pin exact versions (`save-exact=true`). Commit `package-lock.json`. CI: `npm audit --omit=dev --audit-level=high`.
+- PHP: built-in functions only (no Composer); must run on PHP 8.1+; `index.php` refuses to run without
+  mbstring, json, zip, curl (or allow_url_fopen).
+- Astro: `image: { service: passthroughImageService() }`, no remote patterns.
+- Secrets: only the GitHub token, entered by Daniel in the admin and stored in the data folder. Nothing secret in
+  the repository, the package or GitHub variables.
+- Test-only behaviour exists only with `IK_LOKALNO=1` and `IK_TEST=1` (env vars the hosting never has).
 
 ---
 
 ## 9. Privacy
 
 - Every published photo is re-encoded client-side; originals never leave her device.
-- No analytics, no third-party scripts, no cookies on the public site. If analytics are wanted
-  later: Cloudflare Web Analytics (cookieless) only, added by Daniel.
-- Soft-deleted content is irrecoverable after 7 days; audit log kept 365 days (emails only).
-- Privacy notice page content is `TODO(client)` (her obligations toward photographed people are
-  hers — the site only needs a placeholder route `/privatnost`).
+- No analytics, no third-party scripts, no cookies on the public site (the admin cookie is set only under
+  `/admin` use, path `/`, HttpOnly).
+- Soft-deleted content is irrecoverable after 7 days, media files included; the audit log is bounded (~2 MB).
+- GitHub gets only what is public anyway (the export of published albums); drafts and the trash stay on the hosting.
+- Privacy notice page content is `TODO(client)`.
 
 ---
 
-## 10. Operations (Daniel)
+## 10. Operations (Daniel, docs/SETUP.md §10)
 
-- Lost laptop / suspicious activity: Zero Trust → Access → revoke sessions; remove email from
-  policy and from `ADMIN_EMAILS`; redeploy.
-- Backups: D1 Time Travel (restore point in time) + monthly `wrangler d1 export --remote`
-  (scripts/backup.md). R2 objects are immutable by key; deletions only via purge worker.
+- Lost phone / suspicious activity: admin → Korisnici → Nova pozivnica (reset) or Ukloni; `dnevnik.log`.
+- Token: renew before expiry; revoke on GitHub if leaked, then enter a new one.
+- Backups: Hostinger daily backups; monthly download of `ikdirected-podaci/` and `public_html/media/`.
+- Keep PHP on a supported version (hPanel); the API states missing extensions itself.

@@ -2,6 +2,12 @@
 
 Open only if a decision is questioned. Sources at the bottom (checked 2026-09-27).
 
+> **Superseded 2026-11-10 (Daniel):** the site is hosted on Hostinger Unlimited (the account that already runs
+> CamelliaSinensis) as a static Astro build + PHP admin API, published through GitHub Actions — see
+> docs/ARCHITECTURE.md §1 for the shape and why (no Node on the hosting: shared process limit, 503s). Sign-in is
+> password + TOTP in our own code (ported from CamelliaSinensis) instead of Cloudflare Access. Sections 1–2 below
+> record the original Cloudflare reasoning; 3–6 (images in the browser, gallery IA, design, agent setup) still hold.
+
 ## 1. Platform options considered
 
 | Option | Verdict | Reason |

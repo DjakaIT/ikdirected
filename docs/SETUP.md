@@ -1,88 +1,101 @@
-# SETUP — Cloudflare, korak po korak (za Daniela)
+# SETUP — Hostinger, korak po korak (za Daniela)
 
-Ovaj dokument je za čovjeka. Claude Code ga ne otvara i ništa od ovoga ne radi sam
-(nema deploya ni `--remote` naredbi iz agenta).
+Ovaj dokument je za čovjeka. Claude Code ništa od ovoga ne radi sam (nema postavljanja na hosting iz agenta).
 
-**Trošak:** 0 € mjesečno unutar besplatnih limita (Workers 100k zahtjeva/dan, D1 5 GB,
-R2 10 GB + 1M upisa/mj, Zero Trust do 50 korisnika). **R2 i Zero Trust traže da na računu bude
-kartica** iako se ništa ne naplaćuje. 10 GB u R2 ≈ 5.000–7.000 fotografija u sve tri veličine.
+**Kako radi:** javna stranica su obične HTML datoteke u `public_html` (bez Node.js-a). Administracija
+(`/admin`) je PHP u `public_html/api`, podaci su u mapi `ikdirected-podaci` **pokraj** `public_html`
+(korisnici, albumi, povijest, dnevnik), a fotografije u `public_html/media`. Kad Ivana nešto promijeni,
+administracija pošalje popis albuma na GitHub, GitHub Actions za oko 2 minute izgradi stranicu, a
+administracija je sama preuzme i postavi. Isti model kao Camellia sinensis.
 
-> Provjeri pri postavljanju: jedan izvor tvrdi da vezanje R2 bucketa na Worker traži Workers Paid
-> (5 $/mj), dok Cloudflareove stranice cijena navode besplatnu razinu. Ako te dashboard pri
-> deployu zatraži nadogradnju, to je trenutak odluke — javi pa ćemo ocijeniti alternativu.
+**Trošak:** 0 € više od onoga što se već plaća — Hostinger Unlimited (Sarin račun, neograničen broj stranica,
+50 GB) i domena na Porkbunu. GitHub Actions je besplatan (javni repozitorij neograničeno, privatni 2.000 minuta
+mjesečno; jedna objava ≈ 2 minute).
 
 ---
 
-## 0. Preduvjeti
-1. Cloudflare račun (dash.cloudflare.com), kartica dodana pod **Billing → Payment info**.
-2. Domena na Cloudflareu: **Add a site** → upiši domenu → Free plan → kod registrara zamijeni
-   nameservere onima koje Cloudflare pokaže. Čekaj status **Active**.
-3. Lokalno: Node 22, `npx wrangler login` (otvori preglednik, potvrdi).
+## 1. Stranica na Hostingeru (hPanel, Sarin račun)
+1. **Web stranice → Dodaj web stranicu** → prazna stranica (PHP/HTML, *ne* WordPress) → **koristi postojeću
+   domenu** → upiši domenu s Porkbuna.
+2. **Web stranice → Nadzorna ploča** te stranice → *Plan details / Detalji plana*: prepiši **dva nameservera**
+   koja hPanel pokaže (npr. `ns1.dns-parking.com` i `ns2.dns-parking.com`, ali uzmi točno ona koja piše).
+3. **Napredno → PHP konfiguracija**: PHP **8.3 ili 8.4**; u proširenjima uključeno `mbstring`, `curl`, `zip`,
+   `json` (i `intl`, `fileinfo` ako ih ima). Ako nešto nedostaje, `/api/admin/auth/state` to i napiše.
 
-## 1. Baza (D1)
-1. **Workers & Pages → D1 SQL Database → Create** → ime `ikdirected` → Create.
-2. Kopiraj **Database ID** → u `wrangler.jsonc` zamijeni `REPLACE_ME` kod `database_id`.
-3. U terminalu u repozitoriju: `npx wrangler d1 migrations apply ikdirected --remote`.
+## 2. Domena s Porkbuna na Hostinger
+1. porkbun.com → **Account → Domain Management** → kod domene **Details**.
+2. Ako je uključen **DNSSEC**, prvo ga isključi (s uključenim DNSSEC-om domena nakon promjene ne radi).
+3. **Authoritative Nameservers → Edit** → obriši Porkbunove → upiši ona dva iz hPanela → **Submit**
+   (i potvrdi ako opet pita).
+4. Ako na domeni već koristite e-poštu preko Porkbuna: nakon promjene MX zapise treba upisati na Hostingeru
+   (hPanel → Domene → DNS) — inače pošta prestane stizati.
+5. Čekaj: obično sat-dva, najviše 48 h. **hPanel → Sigurnost → SSL**: besplatni certifikat se instalira sam čim
+   domena pokazuje na Hostinger; provjeri da piše *Active* i za `www`.
 
-## 2. Spremište fotografija (R2)
-1. **R2 Object Storage → Create bucket** → ime `ikdirected-media` → lokacija Automatic → Create.
-2. Bucket → **Settings → Public access → R2.dev subdomain: Disabled** (ostavi isključeno).
-3. **Settings → Custom Domains → Connect Domain** → `media.<tvoja-domena>` → Continue → Connect.
-4. U `wrangler.jsonc` postavi `PUBLIC_MEDIA_BASE` na `https://media.<tvoja-domena>`.
+## 3. GitHub (repozitorij `DjakaIT/ikdirected`)
+1. Spoji granu `build/atelier-cms` u `main` (pull request → merge). Na `main` se uvijek pokrenu provjere.
+2. **Settings → Secrets and variables → Actions → Variables → New repository variable**:
+   - `SITE_ORIGIN` = `https://<domena>` (bez kose crte na kraju)
+   - `OBJAVA_UKLJUCENA` = `da` — **tek kad je sve ispod gotovo**. Bez nje GitHub samo provjerava, ništa ne objavljuje.
 
-## 3. Sigurnosna zaglavlja za media poddomenu
-1. Domena → **Rules → Transform Rules → Modify Response Header → Create rule**.
-2. Ime `media-security`. **If** → Custom filter → Field `Hostname` equals `media.<tvoja-domena>`.
-3. **Then** → Set static:
-   - `X-Content-Type-Options` = `nosniff`
-   - `Content-Security-Policy` = `default-src 'none'; sandbox`
-   - `Cross-Origin-Resource-Policy` = `cross-origin`
-4. Deploy.
+## 4. Prvo postavljanje paketa (jednom, ručno)
+1. GitHub → **Actions → Objava → Run workflow** (grana `main`). Kad završi zeleno: otvori taj run →
+   *Artifacts* → preuzmi **hosting** (zip).
+   (Ili lokalno: `SITE_ORIGIN=https://<domena> npm run build && npm run paket` → `hosting.zip`.)
+2. hPanel → **Datoteke → File Manager** → `public_html` → obriši početnu datoteku koju je Hostinger stavio
+   (`default.php` ili `index.php`) → **Upload** zip → desni klik → **Extract** u `public_html` → obriši zip.
+3. Provjeri: `https://<domena>` se otvara, `https://<domena>/admin` pokaže *Postavljanje administracije*.
 
-## 4. Prijava u administraciju (Cloudflare Access)
-1. Lijevi izbornik **Zero Trust** → izaberi team name (npr. `ikdirected`) → plan **Free** → potvrdi.
-   Team domain je `https://<team>.cloudflareaccess.com` → upiši u `CF_ACCESS_TEAM_DOMAIN`.
-2. **Settings → Authentication → Login methods**: One-time PIN mora biti uključen (je, po defaultu).
-3. **Access → Applications → Add an application → Self-hosted**.
-   - Application name: `ikdirected admin`
-   - Session Duration: `24 hours`
-   - **Add public hostname**: domena `<tvoja-domena>`, Path `admin*`
-   - **Add public hostname** (drugi red): domena `<tvoja-domena>`, Path `api/admin*`
-   - Identity providers: samo **One-time PIN**; uključi *Instant Auth*.
-4. **Policies → Add a policy**: ime `Vlasnici`, Action **Allow**, Include → **Emails** → email
-   fotografkinje i tvoj. Save.
-5. Otvori aplikaciju → **Overview / Basic information** → kopiraj **Application Audience (AUD) Tag**
-   → upiši u `CF_ACCESS_AUD`.
-6. `ADMIN_EMAILS` u `wrangler.jsonc` = ista dva emaila, odvojena zarezom.
+## 5. Prvi račun (tvoj, administratorski)
+1. File Manager → mapa **pokraj** `public_html` (`domains/<domena>/ikdirected-podaci/`) → otvori
+   `PRVO-POSTAVLJANJE.txt` → kod oblika `XXXXX-XXXXX-XXXXX`.
+2. `https://<domena>/admin` → kod, korisničko ime (npr. `daniel`), lozinka (12+ znakova) → skeniraj QR kod
+   aplikacijom (Google ili Microsoft Authenticator) → upiši kod → **spremi rezervne kodove** (izvan mobitela).
+   Datoteka s kodom se nakon toga sama briše.
 
-## 5. Prvi deploy
-1. Popuni `src/content/site.ts` stvarnim podacima (sve `TODO(client)`), pa
-   `RELEASE=1 npm run test -- --project unit` mora proći.
-2. `npm ci && npm run gate` → sve zeleno.
-3. `npm run build && npx wrangler deploy`.
-4. **Workers & Pages → ikdirected → Settings → Domains & Routes → Add → Custom domain** →
-   `<tvoja-domena>` (i `www.` ako želiš; preusmjeri `www` → bez `www` pravilom Redirect Rules).
-5. Purge worker: `cd workers/purge && npx wrangler deploy` (koristi istu D1 i R2).
+## 6. Veza s GitHubom (da promjene idu na stranicu)
+1. GitHub → tvoj profil → **Settings → Developer settings → Personal access tokens → Fine-grained tokens →
+   Generate new token**: *Repository access* = samo `DjakaIT/ikdirected`; *Permissions*: **Contents: Read and
+   write**, **Actions: Read-only**; rok najdulji koji nudi (zapiši datum isteka).
+2. Administracija → tvoje ime gore desno → **Objava stranice** → repozitorij `DjakaIT/ikdirected`, grana
+   `sadrzaj`, token → **Spremi i provjeri vezu**. Mora pisati *Veza s GitHubom radi*.
+3. Sad postavi varijablu `OBJAVA_UKLJUCENA = da` (korak 3.2).
 
-## 6. Provjera nakon deploya (5 minuta)
-- [ ] Anonimni prozor → `/admin` → traži email → PIN stiže → ulaziš.
-- [ ] Email koji nije na listi → PIN ne stiže / pristup odbijen.
-- [ ] `curl -i https://<domena>/api/admin/albums` → 401 ili preusmjeravanje na login.
-- [ ] `https://ikdirected.<…>.workers.dev` ne postoji (workers_dev isključen).
-- [ ] Napravi testni album, dodaj 3 fotografije, objavi, pogledaj javno, obriši.
-- [ ] `https://media.<domena>/p/<id>/640.webp` ima zaglavlja iz koraka 3 (DevTools → Network).
-- [ ] securityheaders.com na naslovnici → A ili bolje.
+## 7. Ivanin račun
+Administracija → ime gore desno → **Korisnici** → upiši `ivana` → **Napravi pozivnicu** → poveznicu pošalji
+osobno (poruka). Vrijedi 72 sata; Ivana sama odabere lozinku i skenira QR kod. Upute za nju: `docs/VODIC.md`.
 
-## 7. Predaja fotografkinji (tri rečenice)
-„Otvori `<domena>/admin`, upiši svoj email i unesi kod koji ti stigne. Novi događaj = **Novi album**,
-povuci fotografije u prozor i uključi **Objavljeno** kad si zadovoljna. Na početnu stranicu stavljaš
-fotografije preko izbornika ⋯ → **Na naslovnicu**.”
+## 8. Provjera (10 minuta)
+1. U administraciji napravi testni album, dodaj 2 fotografije, upiši naziv, uključi **Objavljeno**.
+2. Gore desno: *Čeka objavu* → nakon ~20 s *Objavljujem…* → za ~2 min *Stranica je ažurna*
+   (ili klikni **Objavi sada**).
+3. Album je na `https://<domena>/radovi`. Obriši ga → nakon objave stranica albuma vraća 404.
+4. `https://<domena>/api/admin/osvjezi` vraća JSON (`aktualno`). `https://<domena>/media/` vraća 404.
+5. Prije prave objave popuni `src/content/site.ts` stvarnim podacima (sve `TODO(client)`: e-pošta, telefon,
+   cijene, odgovori u FAQ-u) i provjeri `RELEASE=1 npm run test -- --project unit`.
 
-## 8. Održavanje
-- Jednom mjesečno backup baze: `npx wrangler d1 export ikdirected --remote --output=backup-$(date +%F).sql`
-  (spremi izvan repozitorija). D1 dodatno ima Time Travel za vraćanje u prošlost.
-- Kompromitiran uređaj: Zero Trust → **Access → Applications → ikdirected admin → revoke sessions**;
-  makni email iz politike i iz `ADMIN_EMAILS`, redeploy.
-- Nadogradnje: `npm outdated` jednom mjesečno; `@astrojs/cloudflare` drži na najnovijoj verziji.
-- Pravno: obavijest o privatnosti (`/privatnost`) i privole osoba na fotografijama su obveza
-  fotografkinje — sadržaj stranice je `TODO(client)`. Ovo nije pravni savjet.
+## 9. Sigurnosna mreža (preporučeno, 2 minute)
+hPanel → **Napredno → Cron Jobs** → svakih 10 minuta, naredba:
+`curl -s https://<domena>/api/admin/osvjezi > /dev/null`
+Tako se promjena objavi i ako je Ivana zatvorila preglednik prije kraja objave.
+
+## 10. Održavanje
+- **Kopije:** Hostinger radi dnevne kopije. Ono što je nezamjenjivo: `ikdirected-podaci/` (albumi, korisnici)
+  i `public_html/media/` (fotografije). Jednom mjesečno ih preuzmi (File Manager → Compress → Download).
+  Originali fotografija ionako ostaju kod Ivane.
+- **Token:** prije isteka napravi novi (korak 6.1) i upiši ga u *Objava stranice*. Kad istekne, promjene se
+  spremaju, ali ne izlaze na stranicu (gore desno piše *Objava nije uspjela*).
+- **Izgubljen mobitel:** prijava rezervnim kodom; ili ti kao administrator → Korisnici → **Nova pozivnica**
+  (resetira lozinku i dvostruku potvrdu, odjavi sve uređaje).
+- **Sumnjiva prijava:** Korisnici → Ukloni / Nova pozivnica; dnevnik je `ikdirected-podaci/dnevnik.log`.
+- **Obrisano** se može vratiti 7 dana (Albumi → Nedavno obrisano), poslije se briše trajno, i fotografije.
+
+## 11. Ako nešto ne radi
+| Što piše | Što napraviti |
+|---|---|
+| *Objava nije postavljena* | korak 6 |
+| *Objava nije uspjela — GitHub token…* | novi token (korak 6.1) |
+| *…OBJAVA_UKLJUCENA* | varijabla na GitHubu (korak 3.2) |
+| *Izgradnja stranice nije uspjela* | GitHub → Actions → crveni run → koji korak je pao |
+| `/admin` bijela stranica s porukom o PHP-u | korak 1.3 |
+| stranica bez HTTPS-a | korak 2.5 (SSL) |

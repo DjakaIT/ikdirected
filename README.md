@@ -1,5 +1,8 @@
 # ikdirected
 
-Portfolio and gallery CMS for ikdirected (Zadar). Astro 6 on Cloudflare Workers, D1, R2 and Access.
+Portfolio and gallery CMS for ikdirected (Zadar). Static Astro 6 site + a PHP admin API (`api/`) on
+Hostinger; changes in the admin are published through GitHub Actions (docs/ARCHITECTURE.md §1).
 
-Start with `CLAUDE.md` and `docs/PROGRESS.md`.
+- Developers: `CLAUDE.md`, then `docs/PROGRESS.md`. `npm run dev`, `npm run gate`.
+- Putting it on the hosting (Croatian): `docs/SETUP.md`.
+- Admin guide for the photographer (Croatian): `docs/VODIC.md`.

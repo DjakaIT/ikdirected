@@ -64,9 +64,9 @@ say why in the commit message. Never delete or `.skip` a test to go green.
 
 ## Guardrails
 
-- Branch `build/atelier-cms` only. Never push `main`, never force-push, never deploy,
-  never `--remote` on wrangler.
-- Secrets: never read `.dev.vars`/`.env*`; use `.dev.vars.example` for names only.
+- Branch `build/atelier-cms` only. Never push `main`, never force-push, never deploy (no uploads to
+  the hosting, no GitHub variables/tokens, never enable OBJAVA_UKLJUCENA).
+- Secrets: never read `.dev.vars`/`.env*` or admin data folders (`.local/podaci`, `ikdirected-podaci`).
 - If a task conflicts with SECURITY.md, SECURITY.md wins. If it conflicts with DESIGN.md
   aesthetics vs accessibility, accessibility wins. Record the conflict in PROGRESS.md.
 - Stuck twice on the same error → write it under Blockers, take the safest reversible path,

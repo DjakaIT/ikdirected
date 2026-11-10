@@ -5,10 +5,32 @@ Work top to bottom. One task = one pass of the build loop = usually one commit.
 Every phase ends with the gate: `npm run gate` green → `git push -u origin build/atelier-cms`.
 
 **Allowed dependencies** (anything else → record in PROGRESS Decisions with a reason first):
-runtime `astro @astrojs/cloudflare @astrojs/preact preact @preact/signals jose sortablejs @jsquash/webp` ·
-dev `typescript @astrojs/check wrangler vitest @cloudflare/vitest-pool-workers @playwright/test
-@axe-core/playwright eslint typescript-eslint eslint-plugin-astro prettier prettier-plugin-astro sharp`
+runtime `astro @astrojs/preact preact @preact/signals sortablejs @jsquash/webp` ·
+dev `typescript @astrojs/check vitest @playwright/test @axe-core/playwright eslint typescript-eslint
+eslint-plugin-astro prettier prettier-plugin-astro sharp` · PHP: built-in functions only (no Composer) ·
+vendored: `src/admin/vendor/qrcode.mjs` (MIT, Kazuhiko Arase)
 (+ `piexifjs` only if sharp cannot write GPS EXIF for the privacy fixture).
+
+---
+
+### H — Hostinger track (Daniel, 2026-11-10) — replaces the Cloudflare backend (P2–P5, Cloudflare parts of P0/P6)
+
+Static Astro site + PHP admin API + publishing through GitHub Actions (ARCHITECTURE §1, model CamelliaSinensis).
+The front-end work of P1/P6 stays; the P2–P5 tasks below are superseded and kept only for their acceptance ideas.
+
+**H1 Static site** — output static, clean URLs, content from the export (src/lib/data/source.ts), path pagination,
+remove the Cloudflare adapter/wrangler. Commit: `feat(site): static build for shared hosting (Hostinger)` [done]
+**H2 PHP API** — sign-in core (CamelliaSinensis), store, content contract, uploads, export, publish, install;
+tests/php against the real PHP. Commit: `feat(api): …` [done]
+**H3 Admin wiring** — api.ts over fetch/XHR, AuthGate, AccountBar, client-only screens, mock removed;
+CSP meta with hashes. Commits: `feat(admin): …`, `feat(security): …` [done]
+**H4 E2E on the built site** — serve.mjs + dev-router.php, per-test namespaces, sign-in flows, a11y on sign-in.
+Commit: `test(e2e): …` [done]
+**H5 CI + package** — objava.yml (gate + build + paket + artifact), postavi.yml, paket-hosting.mjs. [done]
+**H6 Docs** — CLAUDE.md, ARCHITECTURE, SECURITY, TESTING, SETUP (Hostinger, hr), VODIC (hr). [done]
+**H7 Next** — budgets spec against serve.mjs (P7.3); copy audit (P7.4) incl. the new sign-in copy (not in
+DESIGN §9 — add it there once Daniel approves); `noUncheckedIndexedAccess`/eslint (P0.3 rest); README.
+**H8 Daniel** — SETUP.md on the hosting, real domain in `SITE_ORIGIN`, `site.ts` TODO(client) facts, first publish.
 
 ---
 
@@ -97,7 +119,7 @@ Commit: `feat(ui): 404 page` → **GATE P1**
 
 ---
 
-### P2 — Data layer
+### P2 — Data layer  (superseded by H2: D1 → JSON store)
 
 **P2.1 Migration** — Load: ARCHITECTURE §3. Do: `migrations/0001_init.sql`; test setup applies
 migrations + resets. Test: tables/indexes exist; CHECK constraints reject bad category/date.
@@ -124,7 +146,7 @@ twice is idempotent (wipes and reseeds). Commit: `chore: local seed data` → **
 
 ---
 
-### P3 — Public routes from D1
+### P3 — Public routes from D1  (superseded by H1: static build from the export)
 
 **P3.1 Picture + dev media** — Load: ARCHITECTURE §9; DESIGN §7 (image appear). Do: `Picture.astro`
 (srcset, sizes prop, LQIP background, width/height attrs, eager/lazy prop, `decoding=async`),
@@ -154,7 +176,7 @@ Commit: `feat(http): edge cache for public pages` → **GATE P3**
 
 ---
 
-### P4 — Security core
+### P4 — Security core  (superseded by H2: own sign-in instead of Cloudflare Access)
 
 **P4.1 Access verification** — Load: SECURITY §2, §3. Do: `auth/access.ts` + `jose`.
 Test: SEC-AUTH-02, SEC-AUTH-03 (all six), SEC-AUTH-04, SEC-DEV-01. Commit: `feat(auth): verify cloudflare access jwt`
@@ -169,7 +191,7 @@ routes. Commit: `feat(http): content security policy` → **GATE P4**
 
 ---
 
-### P5 — Admin API (handlers in `src/lib/api/`, thin page wrappers)
+### P5 — Admin API  (superseded by H2: api/ in PHP)
 
 **P5.1 Albums read/create** — Load: ARCHITECTURE §6. Test: happy + auth matrix rows.
 Commit: `feat(api): list, create and get albums`

@@ -3,119 +3,77 @@
 Read first every session. Update last every task. Keep under ~120 lines — summaries only.
 
 ## Status
-Current phase: **Backend — front-end complete (FE1–FE4); next P0.3 remainder → P2**
-Branch: `build/atelier-cms`
-Order (Daniel, 2026-09-27): **front-end first with dummy data + simulated API, backend after.**
-FE1 → FE2 → FE3 → FE4, then P0.3/P0.4 remainder → P2 → P3 wiring → P4 → P5 → P6 wiring → P7.
-Mock data lives behind the same function signatures the D1 repositories will have, so the
-backend swap touches only `src/lib/data/*`.
+Current phase: **H — Hostinger track: H1–H6 done; next H7 (budgets, copy audit, lint), H8 is Daniel's**
+Branch: `build/atelier-cms` (not pushed since the Hostinger switch — push after Daniel's go)
+Hosting decision (Daniel, 2026-11-10): Hostinger Unlimited on Sara Tepša's account, CamelliaSinensis model:
+static Astro site + PHP admin API (`api/`) + publishing via GitHub Actions. Cloudflare backend phases are superseded.
 
-## Phase P0 — Bootstrap  [partly done]
-- [x] P0.1 Scaffold — manual Astro 6 minimal (astro add picks v7 pkgs); build ok
-- [x] P0.2 Bindings and env — wrangler.jsonc, .dev.vars.example, worker types, bindings smoke test
-- [~] P0.3 Tooling — done: TS strict (astro preset), vitest 2 projects, playwright 3 projects,
-      scripts dev/build/check/test/test:e2e/gate. Todo: noUncheckedIndexedAccess, eslint+prettier,
-      db:migrate/db:seed scripts, webServer migrate+seed
-- [ ] P0.4 CI
+## Done before the switch (front-end, still valid)
+- P0.1/P0.2 scaffold (Cloudflare parts removed in H1); P0.3 partly: TS strict, vitest, playwright, gate.
+- FE1 design system, layout, Nav/Footer, 404, site.ts with TODO(client) + release gate.
+- FE2 home: hero, statement, services, area, FAQ, loader, JSON-LD, pinned track, lightbox, cursor.
+- FE3 archive/category/album, rhythm, search, "Učitaj još", JSON-LD, sitemap, robots, /privatnost.
+- FE4 admin screens (Albumi, editor with autosave, real in-browser image pipeline, upload queue, photo grid,
+  Naslovnica).
+- Content: 16 real photos from Ivana's Instagram in the placeholder slots (scripts/import-photos.mjs).
 
-## FE1 — Design system, layout, content, 404  [done]
-- [x] P1.1 tokens.css, base.css, Fonts API (Archivo wght+wdth, Space Mono, latin+latin-ext)
-- [x] P1.3 site.ts with TODO(client) markers; release gate passes / fails with RELEASE=1
-- [x] P1.2 Public layout, Seo, Nav (exactly as reference), Footer (#kontakt on every page)
-- [x] P1.7 404 — e2e public-layout.spec 21/21 green (3 projects)
-
-## FE2 — Home (P1.4 placeholders, P1.5 sections, P1.6 track/lightbox/cursor)  [done]
-- [x] P1.4 placeholders only (16 scenes × 3 WebP + LQIP + og-default.jpg); attack fixtures → backend
-- [x] Mock data layer src/lib/data (public.ts signatures = future D1 repos), srcset, plural, track kind
-- [x] P1.5 hero, say, services (links to categories), area+marquee, FAQ, loader, JSON-LD, hero preload
-- [x] P1.6 pinned lerp track + counter, native-scroll fallback, dialog lightbox (swipe), cursor dot
-      Verified side by side with reference screenshots; gate green (27 unit/int, 63 e2e). JS 2.8 KB gz.
-## FE3 — Archive, category, album, SEO (mock data)  [done]
-- [x] P2.2 (part) dates.ts + plural.ts; slug.ts moves to backend (server-side only)
-- [x] P2.5 rhythm.ts (+ tests); single tall/square rows capped at ~90svh inside their 3/11 column
-- [x] P3.3 /radovi: chip bar (links), year groups, 4:5 cards + hover 2nd photo, search + live region,
-      "Učitaj još" (DOM adoption of server HTML, replaceState), ?stranica validation → 404
-- [x] P3.4 /radovi/[seg]: category view | album | identical 404 (SEC-ENUM-01)
-- [x] P3.5 album: 88svh hero, breadcrumbs, meta sentence, story, rhythm rows, lightbox, prev/next, CTA
-- [x] P3.6 JSON-LD (home, collection, gallery, breadcrumbs), sitemap.xml, robots.txt, /privatnost
-      Gate green: 37 unit/int, 141 e2e (3 projects), axe clean on 6 public routes.
-## FE4 — Admin UI with simulated API (P6.1–P6.7)  [done]
-- [x] P6.1 Admin layout/top bar (email + Odjava, noindex), admin.css, Toast, Dialog, api.ts + typed errors
-      → Croatian copy; in-browser API simulation src/admin/mock/server.ts (localStorage, latency)
-- [x] P6.2 Albumi: 4/3/2 grid, pills, chips (Sve/4 kategorije/Skice), Novi album, trash + Vrati, empty state
-- [x] P6.3 editor: autosave 800 ms + abort, save states + retry, publish switch + reasons, delete dialog
-- [x] P6.4 image pipeline REAL (worker, EXIF orientation, 3× WebP under caps, LQIP, WASM fallback)
-- [x] P6.5 upload queue (process 1 / upload 3, progress, "Prenosim i / n", retry one, beforeunload)
-- [x] P6.6 photo grid: sortablejs drag + ⋯ menu (keyboard), cover, ★ homepage, alt, undo delete
-- [x] P6.7 Naslovnica strip, n / 12, ←/→ + drag, Makni, empty state
-      Gate green: 43 unit/int, 222 e2e (3 projects), axe clean on 9 routes incl. admin.
-## Content — real photos (Daniel, 2026-11-10)  [done]
-- [x] scripts/import-photos.mjs (`npm run photos:import -- <dir>`): ph-01…ph-16 originals → WebP variants,
-      LQIP, og-default.jpg. 16 photos from 4 Instagram posts Daniel linked (DfcBDcUjpnV, DeFCt_gDnGw,
-      DdwlWLZDo6P, DdRLt6mjmcC; DeU-LwbOZJQ is a reel). Mock album covers now per category. Gate green.
-## Backend  [next] — P0.3 rest, P0.4, P2.1/2.3/2.4/2.6/2.7, P3.1 dev media + P3.2–3.7 wiring (swap
-   src/lib/data/public.ts to D1), P4, P5 (handlers in src/lib/api), P6 wiring (api.ts → fetch/XHR,
-   delete src/admin/mock + test hooks, privacy test via /_dev/media), P7.
+## H — Hostinger track
+- [x] H1 static build (format file + .htaccess clean URLs), content from export (source.ts, validated),
+      path pagination /radovi/stranica/N, Cloudflare adapter/wrangler/pool-workers removed
+- [x] H2 api/ PHP: sign-in core ported from CamelliaSinensis (Argon2id, TOTP, recovery codes, invites, sessions,
+      limits, first-setup code), JSON store + history + audit, content contract, uploads (RIFF chunk walk, never
+      decoded), export, publish (GitHub branch sadrzaj + dispatch), install (stale pages removed, media kept)
+- [x] H3 admin: api.ts fetch/XHR + CSRF, AuthGate, AccountBar (publish status, password, users, settings),
+      client-only screens, mock removed; Astro CSP meta with hashes (42/42 pages covered)
+- [x] H4 e2e on dist/ + PHP (serve.mjs + dev-router.php), per-test namespaces, sign-in flows, axe on sign-in
+- [x] H5 objava.yml (gate → build → paket → artifact), postavi.yml, paket-hosting.mjs (150 files, 8.3 MB)
+- [x] H6 docs: CLAUDE.md, ARCHITECTURE, SECURITY, TESTING, SETUP (hr, Hostinger + Porkbun), VODIC (hr)
+      Gate green: check 0 errors, 122 vitest (40 unit + 82 PHP API), 246 e2e (3 projects).
+- [ ] H7 budgets spec on serve.mjs; copy audit; eslint/prettier + noUncheckedIndexedAccess; README
 
 ## Installed versions
-P0: astro 6.4.8 · @astrojs/cloudflare 13.7.0 · @astrojs/preact 5.1.5 · preact 10.29.8 ·
-  wrangler 4.142.0 · typescript 6.0.3 · @astrojs/check 0.9.10 · vitest 4.1.11 ·
-  @cloudflare/vitest-pool-workers 0.22.0 · node 24.13.0 / npm 11.6.2
-FE1: @playwright/test 1.63.0 · @axe-core/playwright 4.13.0 · @types/node 22.20.4
-FE2: sharp 0.35.5
-FE4: @preact/signals 2.11.2 · sortablejs 1.15.7 · @jsquash/webp 1.5.0
+astro 6.4.8 · @astrojs/preact 5.1.5 · preact 10.29.8 · @preact/signals 2.11.2 · sortablejs 1.15.7 ·
+@jsquash/webp 1.5.0 · typescript 6.0.3 · @astrojs/check 0.9.10 · vitest 4.1.11 · @playwright/test 1.63.0 ·
+@axe-core/playwright 4.13.0 · @types/node 22.20.4 · sharp 0.35.5 · node 24.13.0 / npm 11.6.2 ·
+local PHP 8.4.27 (portable, .tools/, sha256 checked) · CI PHP = ubuntu-24.04 runner's 8.3
+Removed (H1): @astrojs/cloudflare, wrangler, @cloudflare/vitest-pool-workers.
 
 ## Decisions
-- 2026-09-27 Stack fixed per docs/RESEARCH.md (Astro 6 + Workers + D1 + R2 + Access).
-- 2026-09-27 npm latest is Astro 7 / cloudflare 14 / preact-int 6 → pinned last Astro-6-compatible lines.
-  TS 6.x (not 7: @astrojs/check peers ^5||^6); vitest 4.1.x (pool-workers peers ^4.1).
-- 2026-09-27 Removed leftover Vite+React template from repo root (Daniel approved).
-- 2026-09-27 compatibility_date 2026-08-20: pool-workers' bundled workerd supports ≤ 2026-08-22.
-- 2026-09-27 Session driver lruCache (unused) so the adapter does not auto-provision a KV namespace.
-- 2026-09-27 @types/node added (types only) — unit tests and scripts use node:fs.
-- 2026-09-27 JWKS mock: pool-workers 0.22 has no `fetchMock`; use vi.spyOn(globalThis, "fetch") in P4.
-- 2026-09-30 Daniel: match reference exactly → nav is brand + "Provjerite termin" only (no Radovi link).
-  Paths to /radovi: hero "Pogledajte radove ↓" → gallery, "Sve priče (N) →", service cards, footer.
-- 2026-09-30 Footer end: "Dizajn A — Atelier" (design-variant label) replaced by "Svi radovi" link.
-- 2026-09-30 Track end card keeps reference text + PD-07 "Sve priče (N) →"; intro text computed
-  ("Dvanaest fotografija iz 2023. – 2026."). Track widths per ARCHITECTURE §7.2 (reference used 26vw on mobile — bug).
-- 2026-09-30 Archivo optimizedFallbacks off: → and ✕ must render from system-ui like the reference.
-- 2026-09-30 a11y conflict PD-10 (.28 unrevealed words fail contrast at rest): axe runs after a
-  top-to-bottom read-through; reduced motion shows full text. Accessibility wins if Daniel disagrees.
-- 2026-09-30 --t-body token (16–18px) kept over reference 14px body (DESIGN §2 tokens win).
-- 2026-09-30 Budgets spec (JS/CSS transfer) needs a production preview; measured manually now,
-  automated in P7.3. Dev toolbar disabled.
-- 2026-09-30 Album CTA links to #kontakt (contact footer is on every page) instead of /#kontakt.
-- 2026-09-30 Footer end row: "Svi radovi · Privatnost" (privacy page needs a link); copy in site.ts TODO(client).
-- 2026-09-30 Workers runtime types merge an HTMLRewriter `Element.append` into DOM typings →
-  client code uses appendChild. Revisit if wrangler types gain a DOM-safe mode.
-- 2026-09-30 Playwright + JS disabled + cross-document view transition: click stalls mid-transition
-  (browser click itself works). No-JS link test runs with reducedMotion to isolate behaviour.
-- 2026-09-30 AC-ARC-06 (empty category) untestable with mock data — covered after seed in P3 wiring.
-- 2026-10-01 Admin API simulated in the browser (src/admin/mock, localStorage key ik-admin-mock-v1);
-  admin edits do not reach the public mock. Test hooks: localStorage "ik-mock-fail", window.__ikLastUpload (dev).
-- 2026-10-01 Contract addition: Photo responses carry `thumb` (640 URL built server-side).
-- 2026-10-01 Copy not in DESIGN §9, kept minimal: alt dialog "Spremi"; aria names (Administracija, Filtar,
-  Izbornik fotografije N, Radnje s fotografijom, Kategorije, Putanja, Druge priče). Delete dialog uses
-  accusative "fotografiju/fotografije/fotografija".
-- 2026-10-01 sortablejs typed via local src/admin/sortablejs.d.ts (no @types dep). Vite optimizeDeps
-  pre-declared (stale-deps 500s in workerd otherwise); worker format es (WASM lazy import).
-- 2026-10-01 make-fixtures: placeholders rebuilt only with --force (WebP bytes not stable across runs).
-- 2026-11-10 Placeholder slots hold real photos (tone "photo"); originals stay out of git (photos/ ignored,
-  selection kept outside the repo). make-fixtures --force keeps them unless --overwrite-photos.
-- 2026-11-10 Daniel asked about Netlify hosting: stack needs D1/R2/Access → told him it stays on Cloudflare
-  unless he decides otherwise (would mean rewriting the backend before P2).
+- 2026-09-27 Pinned the last Astro-6-compatible lines (npm latest is Astro 7). TS 6.x, vitest 4.1.x.
+- 2026-09-30 Daniel: match reference exactly → nav is brand + "Provjerite termin" only. Footer end row
+  "Svi radovi · Privatnost". Track end card "Sve priče (N) →". Album CTA → #kontakt.
+- 2026-09-30 Archivo optimizedFallbacks off (→ ✕ from system-ui). --t-body token over reference 14px.
+- 2026-09-30 a11y conflict PD-10 (.28 words fail contrast at rest): axe after a read-through; reduced motion shows
+  full text. Accessibility wins if Daniel disagrees.
+- 2026-09-30 No-JS link test runs with reducedMotion (Playwright click stalls mid view-transition).
+- 2026-10-01 Photo responses carry `thumb`. Copy not in DESIGN §9 kept minimal (alt "Spremi", aria names).
+- 2026-10-01 make-fixtures: placeholders rebuilt only with --force; real photos kept unless --overwrite-photos.
+- 2026-11-10 Daniel: Hostinger (Sara's Unlimited plan, cousins agree) instead of Cloudflare/Netlify.
+- 2026-11-10 Photos are NOT pushed to GitHub (CamelliaSinensis pushes its images): only the public export
+  (metadata); photos live in public_html/media. Keeps the repo small and drafts off GitHub.
+- 2026-11-10 Media on the same origin under a locked media/.htaccess (no subdomain) — SECURITY §7/ARCH §9.
+- 2026-11-10 Server never decodes uploads (no GD on untrusted bytes, libwebp CVE class); container parse only.
+- 2026-11-10 Publish batches edits: 20 s quiet or "Objavi sada"; never during a running build.
+- 2026-11-10 Pagination moved from ?stranica=N to /radovi/stranica/N (static files); a query string on a
+  static page is served (canonical names the address) instead of 404.
+- 2026-11-10 Without branch sadrzaj the production build uses an empty export, never the demo albums.
+- 2026-11-10 Sign-in copy written in neutral ti-form (not in DESIGN §9 yet): Prijava, Kod s mobitela,
+  Postavljanje administracije, Dvostruka potvrda, Spremi rezervne kodove, Pozivnica…; top bar status
+  "Stranica je ažurna / Čeka objavu / Objavljujem… / Objava nije uspjela / Objava nije postavljena".
+- 2026-11-10 E2E isolation: cookie ik-test-ns → own data/media folders (IK_LOKALNO=1 + IK_TEST=1 only).
 
 ## Blockers
-- 2026-11-10 Cold Vite cache: first desktop admin e2e tests can fail (page without <head>); re-run green.
-  Fix in P0.3 by warming /admin in the webServer step.
+(none) — the cold-Vite-cache admin flake is gone with the static build.
 
 ## Waiting on Daniel / client
-- Real domain, email, phone, person name, prices, FAQ answers, review quote → `src/content/site.ts`
-- Category intros in site.ts are drafted from reference facts only — client must approve (TODO(client))
-- Cloudflare setup (docs/SETUP.md) before first deploy
+- Hosting setup per docs/SETUP.md (Hostinger site, Porkbun nameservers, GitHub variables, token, first account)
+- Merge build/atelier-cms → main; push of this branch (gate is green)
+- Real domain → GitHub variable SITE_ORIGIN; email, phone, prices, FAQ answers, review → `src/content/site.ts`
+- Category intros in site.ts drafted from reference facts only — client must approve (TODO(client))
+- Approve the sign-in copy (then move it into DESIGN §9)
 - ph-03 (Iz zraka card fallback) is not a drone photo — swap in a real aerial shot when available
 - Instagram page title names the photographer "Ivana Klarica" — confirm before putting it in site.ts
+- Apache/LiteSpeed rules are emulated locally, not run: check SETUP §8 on the hosting once
 
 ## Next session starts at
-Backend — P0.3 remainder (eslint + prettier, noUncheckedIndexedAccess), then P2.1 `migrations/0001_init.sql`.
+H7 — budgets spec against scripts/serve.mjs (tests/e2e/budgets.spec.ts), then the copy audit (P7.4 + sign-in copy).
