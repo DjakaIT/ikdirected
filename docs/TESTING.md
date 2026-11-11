@@ -62,7 +62,7 @@ runs fully parallel against one server. Failure cases use `page.route()`; never 
 **PHP API** (`tests/php`) — everything in SECURITY.md §6, plus publish rules, slug generation/freeze and reserved
 words, cover reassignment, featured cap and renumbering, reorder set-mismatch, restore positions, purge (rows +
 slug retirement), the export contract (TS `parseExport` accepts what PHP writes), publishing against a fake GitHub
-(commit, dispatch, install, stale-page removal, refused packages).
+(only the export committed, dispatch, done when the deployed package names the content, failed / never-pulled builds).
 
 **Public e2e** — AC-HOME-01..06 (incl. JS disabled), AC-ARC-01..06 (path pagination `/radovi/stranica/N` with and
 without JS, search live region), AC-CAT-01/02, AC-ALB-01..06, AC-LB-01/02, AC-SEO-01..05.

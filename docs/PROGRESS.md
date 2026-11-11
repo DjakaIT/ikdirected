@@ -26,7 +26,8 @@ static Astro site + PHP admin API (`api/`) + publishing via GitHub Actions. Clou
 - [x] H3 admin: api.ts fetch/XHR + CSRF, AuthGate, AccountBar (publish status, password, users, settings),
       client-only screens, mock removed; Astro CSP meta with hashes (42/42 pages covered)
 - [x] H4 e2e on dist/ + PHP (serve.mjs + dev-router.php), per-test namespaces, sign-in flows, axe on sign-in
-- [x] H5 objava.yml (gate → build → paket → artifact), postavi.yml, paket-hosting.mjs (150 files, 8.3 MB)
+- [x] H5 objava.yml (gate → build → paket → commit to branch hosting for hPanel Deploy from Git); photos moved
+      outside public_html (ikdirected-podaci/media, served by media/index.php); PHP installer + postavi.yml removed
 - [x] H6 docs: CLAUDE.md, ARCHITECTURE, SECURITY, TESTING, SETUP (hr, Hostinger + Porkbun), VODIC (hr)
       Gate green: check 0 errors, 122 vitest (40 unit + 82 PHP API), 246 e2e (3 projects).
 - [ ] H7 budgets spec on serve.mjs; copy audit; eslint/prettier + noUncheckedIndexedAccess; README
@@ -51,7 +52,9 @@ Removed (H1): @astrojs/cloudflare, wrangler, @cloudflare/vitest-pool-workers.
 - 2026-11-10 Daniel: Hostinger (Sara's Unlimited plan, cousins agree) instead of Cloudflare/Netlify.
 - 2026-11-10 Photos are NOT pushed to GitHub (CamelliaSinensis pushes its images): only the public export
   (metadata); photos live in public_html/media. Keeps the repo small and drafts off GitHub.
-- 2026-11-10 Media on the same origin under a locked media/.htaccess (no subdomain) — SECURITY §7/ARCH §9.
+- 2026-11-11 Daniel: deploy through hPanel "Deploy from Git" (branch hosting). hPanel runs no build and may replace
+  all of public_html → GitHub builds; photos live in ikdirected-podaci/media (one PHP request per image, cached a year);
+  publish is done when public_html/.ik-paket.json names the content commit. (CamelliaSinensis used artifact install.)
 - 2026-11-10 Server never decodes uploads (no GD on untrusted bytes, libwebp CVE class); container parse only.
 - 2026-11-10 Publish batches edits: 20 s quiet or "Objavi sada"; never during a running build.
 - 2026-11-10 Pagination moved from ?stranica=N to /radovi/stranica/N (static files); a query string on a
@@ -66,7 +69,8 @@ Removed (H1): @astrojs/cloudflare, wrangler, @cloudflare/vitest-pool-workers.
 (none) — the cold-Vite-cache admin flake is gone with the static build.
 
 ## Waiting on Daniel / client
-- Hosting setup per docs/SETUP.md (Hostinger site, Porkbun nameservers, GitHub variables, token, first account)
+- Hosting setup per docs/SETUP.md (GitHub variables + first Objava run → branch hosting; hPanel Create site →
+  Deploy from Git; Porkbun nameservers; first account; token; invite Ivana)
 - Merge build/atelier-cms → main; push of this branch (gate is green)
 - Real domain → GitHub variable SITE_ORIGIN; email, phone, prices, FAQ answers, review → `src/content/site.ts`
 - Category intros in site.ts drafted from reference facts only — client must approve (TODO(client))

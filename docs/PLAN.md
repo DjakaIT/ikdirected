@@ -20,13 +20,14 @@ The front-end work of P1/P6 stays; the P2–P5 tasks below are superseded and ke
 
 **H1 Static site** — output static, clean URLs, content from the export (src/lib/data/source.ts), path pagination,
 remove the Cloudflare adapter/wrangler. Commit: `feat(site): static build for shared hosting (Hostinger)` [done]
-**H2 PHP API** — sign-in core (CamelliaSinensis), store, content contract, uploads, export, publish, install;
+**H2 PHP API** — sign-in core (CamelliaSinensis), store, content contract, uploads, export, publish;
 tests/php against the real PHP. Commit: `feat(api): …` [done]
 **H3 Admin wiring** — api.ts over fetch/XHR, AuthGate, AccountBar, client-only screens, mock removed;
 CSP meta with hashes. Commits: `feat(admin): …`, `feat(security): …` [done]
 **H4 E2E on the built site** — serve.mjs + dev-router.php, per-test namespaces, sign-in flows, a11y on sign-in.
 Commit: `test(e2e): …` [done]
-**H5 CI + package** — objava.yml (gate + build + paket + artifact), postavi.yml, paket-hosting.mjs. [done]
+**H5 CI + package** — objava.yml (gate + build + paket → branch `hosting` for hPanel Git deploy), paket-hosting.mjs;
+photos outside public_html via media/index.php (Daniel, 2026-11-11: deploy with hPanel Git). [done]
 **H6 Docs** — CLAUDE.md, ARCHITECTURE, SECURITY, TESTING, SETUP (Hostinger, hr), VODIC (hr). [done]
 **H7 Next** — budgets spec against serve.mjs (P7.3); copy audit (P7.4) incl. the new sign-in copy (not in
 DESIGN §9 — add it there once Daniel approves); `noUncheckedIndexedAccess`/eslint (P0.3 rest); README.

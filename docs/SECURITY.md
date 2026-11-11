@@ -23,13 +23,14 @@ faces, locations), her admin session, the GitHub token (write access to the cont
 | T4 | Session theft / fixation | 256-bit random id in an HttpOnly SameSite=Strict `__Host-` Secure cookie; server stores only its SHA-256; new id on every sign-in step; 30 min idle, 12 h max; password change/reset/removal bumps `sessionVersion` (signs out everywhere) | auth tests |
 | T5 | Logged-in browser tricked into a mutation (CSRF) | Origin == site and Sec-Fetch-Site same-origin on every mutating request, **and** the session's `X-CSRF` token; SameSite=Strict cookie | SEC-CSRF-01/02 |
 | T6 | First setup hijacked on a fresh install | Setup needs the code in `PRVO-POSTAVLJANJE.txt` outside `public_html` (only the hosting owner can read it); one-time | — (manual, SETUP §5) |
-| T7 | Malicious file upload (web shell, stored XSS via SVG, polyglot) | Client re-encodes to WebP; server accepts **only** structurally valid still WebP (chunk walk, size field must match length); no SVG ever; server-generated UUID paths; `media/.htaccess` allows only `p/<uuid>/<variant>.webp`, removes every handler, `nosniff` + `sandbox` CSP; never decoded or executed server-side | SEC-UP-01..10 |
-| T8 | Draft / deleted content leak | Only the public export (published, live) leaves the hosting and is built; unknown, draft and deleted slugs are the same static 404; an install removes pages of deleted albums | SEC-ENUM-01, publish tests |
+| T7 | Malicious file upload (web shell, stored XSS via SVG, polyglot) | Client re-encodes to WebP; server accepts **only** structurally valid still WebP (chunk walk, size field must match length); no SVG ever; server-generated UUID paths; files stored **outside** `public_html` (nothing uploaded can ever be executed by the web server) and sent only by `media/index.php` for `p/<uuid>/<variant>.webp` as `image/webp` with `nosniff` + `sandbox` CSP; never decoded or executed server-side | SEC-UP-01..10 |
+| T8 | Draft / deleted content leak | Only the public export (published, live) leaves the hosting and is built; unknown, draft and deleted slugs are the same static 404; the next build commit removes pages of deleted albums (rsync --delete on branch hosting) | SEC-ENUM-01, publish tests |
 | T9 | Stored XSS through titles, places, alt, story | Astro auto-escaping, no `set:html` with data, JSON-LD `<` → `<`, CSP without `unsafe-inline` scripts (hashes) | SEC-XSS-01 |
 | T10 | IDOR / mass assignment | Strict key sets; ids checked as UUID; reorder needs exactly the live set of that album | SEC-IDOR-01 |
 | T11 | Location leak from photo EXIF/GPS | Canvas re-encode strips metadata; server rejects VP8X with EXIF/XMP flags or chunks | SEC-UP-06, AC-UP-03 |
-| T12 | Path traversal / file overwrite | No path from user input (UUIDs we generated, checked); install accepts only plain relative names and never writes `media/*` or outside `public_html` | publish tests |
-| T13 | Malicious or broken build package | Only successful `objava.yml` runs on `main` of the configured repository; artifact download never forwards the token; size and file-count caps | publish tests |
+| T12 | Path traversal / file overwrite | No path from user input (UUIDs we generated, checked); nothing is unpacked on the hosting — `public_html` is hPanel's Git checkout of branch hosting | content/upload tests |
+| T13 | Malicious or broken build on the hosting | Branch `hosting` is written only by `objava.yml` on `main` (GITHUB_TOKEN with `contents: write` for that job only) after the build; hPanel deploys only that branch; `.git/` and dot files are 404; a failed build never reaches `hosting` | publish tests, SETUP §7 |
+| T13b | Git deploy wipes data | Nothing that must survive is in `public_html`: accounts, content, history and photos are in `ikdirected-podaci/` | ARCH §1, §9 |
 | T14 | GitHub token leak | Fine-grained, one repository, Contents RW + Actions R, expiring; stored only in the data folder (mode 600, outside `public_html`); never returned to the browser | publish tests |
 | T15 | Abuse from a stolen session (storage fill) | 1500 uploads / user / 24 h; album cap 400; soft delete 7 days; audit log | SEC-RATE-01 |
 | T16 | Information disclosure in errors | Uniform `{error:{code,message}}`, 500 `INTERNAL` with no detail; `display_errors` off; `X-Powered-By` removed | SEC-ERR-01 |
@@ -109,7 +110,7 @@ Origin → 403 ORIGIN), SEC-CSRF-02 (no CSRF token → 403), plus validation fai
 | SEC-UP-07 | variant over byte cap → 413; request over 4 MB → 413 |
 | SEC-UP-08 | dimensions disagree with meta or each other → 422; > 2400 px → 422 |
 | SEC-UP-09 | missing/extra multipart fields, bad meta → 400 |
-| SEC-UP-10 | stored under `media/p/<uuid>/<variant>.webp`, served as image/webp with nosniff + sandbox; other paths 404 |
+| SEC-UP-10 | stored under `<data>/media/p/<uuid>/<variant>.webp` (outside public_html), served as image/webp with nosniff + sandbox; other paths 404 |
 | SEC-SQL-01 | `'; DROP TABLE albums; --` and `" OR 1=1 --` stored verbatim (no database, but the rule stands) |
 | SEC-XSS-01 | hostile titles/stories stored verbatim; rendering escapes them (Astro) |
 | SEC-IDOR-01 | reorder with a photo id from another album → 400; restore unknown id → 404 |
@@ -118,7 +119,7 @@ Origin → 403 ORIGIN), SEC-CSRF-02 (no CSRF token → 403), plus validation fai
 | SEC-RATE-01 | 1501st upload in 24 h for one user → 429 |
 | SEC-ERR-01 | forced internal error → 500 `{error:{code:INTERNAL,message:"Greška na poslužitelju."}}` only |
 | auth | wrong password = unknown user; TOTP replay refused; recovery code single use; 5 failures → 429 + Retry-After; cookie HttpOnly + SameSite=Strict; password change signs out other sessions; editors cannot manage users; invite single use |
-| publish | export holds only published live content; token never returned; install removes stale pages, keeps media; package with `../` or `media/` paths refused; storage download without token |
+| publish | export holds only published live content; only the export file is committed; token never returned; main/hosting refused as content branch; done only when the deployed package names the content; failed build and never-pulled build reported |
 
 ---
 
@@ -126,9 +127,9 @@ Origin → 403 ORIGIN), SEC-CSRF-02 (no CSRF token → 403), plus validation fai
 
 Allow-list only plain still WebP on the server · RIFF size must equal the length · every chunk walked, only
 image chunks allowed · EXIF/XMP/animation rejected · byte caps per variant + request cap · dimension caps and
-cross-checks · server-side UUID paths · `media/.htaccess`: only the variant pattern, `nosniff`,
-`default-src 'none'; sandbox`, handlers removed, scripts/HTML/SVG denied · never decoded, transformed or executed
-server-side · client re-encode removes metadata. Same origin as the site (ARCHITECTURE §9 says why).
+cross-checks · server-side UUID paths · stored outside `public_html` · sent only by `media/index.php` (variant
+pattern only, `image/webp`, `nosniff`, `default-src 'none'; sandbox`) · never decoded, transformed or executed
+server-side · client re-encode removes metadata. Same origin as the site (ARCHITECTURE §9).
 
 ---
 
@@ -159,5 +160,5 @@ server-side · client re-encode removes metadata. Same origin as the site (ARCHI
 
 - Lost phone / suspicious activity: admin → Korisnici → Nova pozivnica (reset) or Ukloni; `dnevnik.log`.
 - Token: renew before expiry; revoke on GitHub if leaked, then enter a new one.
-- Backups: Hostinger daily backups; monthly download of `ikdirected-podaci/` and `public_html/media/`.
+- Backups: Hostinger daily backups; monthly download of `ikdirected-podaci/` (content, accounts and photos).
 - Keep PHP on a supported version (hPanel); the API states missing extensions itself.

@@ -15,24 +15,26 @@ so nothing runs Node on the hosting.
 
 ```
  visitor ──► https://<domain>/            LiteSpeed/Apache: public_html/*.html (Astro static build)
-         ──► https://<domain>/media/p/…   public_html/media/p/<photoId>/{640,1280,2400}.webp (uploads)
+         ──► https://<domain>/media/p/…   public_html/media/index.php → ikdirected-podaci/media/p/<id>/<v>.webp
  admin   ──► https://<domain>/admin       static shell + Preact islands (AuthGate, screens)
               │  fetch / XHR
               ▼
          /api/admin/*  ──► public_html/api/index.php (PHP 8.1+, no DB)
-              │              data: <domain folder>/ikdirected-podaci/   (outside public_html)
-              │              photos: public_html/media/
-              │  after a change (20 s quiet or "Objavi sada"): public export → GitHub branch `sadrzaj`
+              │              data + photos: <domain folder>/ikdirected-podaci/   (outside public_html)
+              │  after a change (20 s quiet or "Objavi sada"): public export → GitHub branch `sadrzaj` + dispatch
               ▼
- GitHub Actions objava.yml: code from main + sadrzaj/sadrzaj.json → astro build → npm run paket → artifact "hosting"
-              │  postavi.yml → GET /api/admin/osvjezi ; the admin's status poll also checks
+ GitHub Actions objava.yml: code from main + sadrzaj/sadrzaj.json → astro build → npm run paket → commit to branch `hosting`
+              │  hPanel "Deploy from Git" (branch hosting → public_html, auto-deploy webhook)
               ▼
- PHP Installer: download artifact → copy into public_html → remove files the previous package had and this one has not
+ public_html = branch hosting. The admin's status poll sees the publish done when public_html/.ik-paket.json names
+ the content commit it sent.
 ```
 
 Why this shape: no monthly cost beyond the plan and the domain, nothing to keep running on the host, the
 public site is plain files (fast, cacheable, no runtime to attack), the admin's data never leaves the hosting
-(only the public export goes to GitHub), and the same model already runs for CamelliaSinensis.
+(only the public export goes to GitHub), and deploys are hPanel's own Git integration (Daniel, 2026-11-11). hPanel's
+Git deploy has no build step ("what's in the repo is what gets served") and may replace everything in
+`public_html`, so the build happens on GitHub and nothing that must survive lives in `public_html`.
 
 Image processing happens **in the admin's browser** (resize + WebP + EXIF strip). The server only parses
 the WebP container and stores the bytes — it never decodes or transforms an image.
@@ -45,11 +47,11 @@ Trade-off accepted: a change is public after the build (~2 min, status shown in 
 
 ```
 astro.config.mjs           output static, build.format file, security.csp, dev proxy /api /media → :8787
-public/.htaccess           public_html rules: HTTPS, clean URLs, admin album rewrite, headers, cache
-public/media/.htaccess     only p/<uuid>/<640|1280|2400>.webp, nosniff + sandbox CSP, no scripts
+public/.htaccess           public_html rules: HTTPS, clean URLs, admin album rewrite, dot paths 404, headers, cache
 api/                       → public_html/api/
   index.php .htaccess      front controller (PHP/extension check), everything routed here
-  lib/ base passwords users sessions limits store content media export install publish app (.php)
+  lib/ config base passwords users sessions limits store content media export publish app (.php)
+media/                     → public_html/media/: index.php + .htaccess, the photo route (files are in the data folder)
 src/
   content/site.ts          all business facts, TODO(client) markers
   lib/data/ source.ts      build-time content: IK_SADRZAJ export (validated) or demo (mock.ts)
@@ -62,7 +64,7 @@ src/
          admin/{index,album,naslovnica}.astro
 scripts/  dev.mjs serve.mjs dev-router.php php.mjs build-local.mjs paket-hosting.mjs zip.mjs
           make-fixtures.mjs import-photos.mjs
-.github/workflows/ objava.yml postavi.yml
+.github/workflows/ objava.yml    (gate; build + paket → branch hosting)
 tests/    unit/ php/ (API against php -S) e2e/ fixtures/
 ```
 
@@ -79,7 +81,8 @@ tests/    unit/ php/ (API against php -S) e2e/ fixtures/
 | `korisnici.json` | users: name, role, password hash (Argon2id), TOTP secret, recovery code hashes, sessionVersion |
 | `sesije/<sha256(id)>.json` | sessions |
 | `ogranicenja.json` | attempt and upload counters |
-| `objava*.json`, `instalirano.json`, `osvjezi.json`, `ciscenje.json` | publishing and housekeeping state |
+| `media/p/<photoId>/{2400,1280,640}.webp` | the uploaded photos (served by `public_html/media/index.php`) |
+| `objava*.json`, `osvjezi.json`, `ciscenje.json` | publishing and housekeeping state |
 | `PRVO-POSTAVLJANJE.txt` | first-setup code, deleted after the first account |
 
 Rows (unchanged from the original schema):
@@ -97,7 +100,8 @@ version + 1, atomic write, snapshot, export, publisher told. An `ApiError` insid
 ## 4. Config and env
 
 On the hosting nothing is configured by hand: `api/konfiguracija.json` (written by `npm run paket`) holds the
-public origin; paths are relative to `api/` (data = `dirname(public_html)/ikdirected-podaci`).
+public origin; `api/lib/config.php` derives the paths (data = `dirname(public_html)/ikdirected-podaci`, photos =
+`ikdirected-podaci/media`).
 Env (local runs and tests only): `IK_PODACI`, `IK_MEDIA`, `IK_JAVNO`, `IK_ORIGIN`, `IK_LOKALNO=1`
 (no Secure cookies, localhost hosts, first setup without the code from 127.0.0.1), `IK_TEST=1` (seed route +
 per-test namespaces via cookie `ik-test-ns`), `IK_GITHUB_API`, `IK_OSVJEZI_MS`.
@@ -154,7 +158,7 @@ Sign-in and accounts:
 | GET | /publish | – | `{state: unconfigured\|ready\|building\|error, published, message, pending}` |
 | POST | /publish/now | – | publish without waiting for the quiet window |
 | GET/POST | /publish/settings | `{repo, branch, token}` | administrator only; token never returned |
-| GET | /osvjezi | – | public: install the newest build of this repo (postavi.yml, Cron) |
+| GET | /osvjezi | – | public, at most once a minute: publish what waits, finish a running publish (hPanel Cron) |
 
 Error codes: `VALIDATION UNAUTHORIZED FORBIDDEN ORIGIN NOT_FOUND CONFLICT PUBLISH_BLOCKED FEATURED_FULL
 ALBUM_FULL UNSUPPORTED_MEDIA TOO_LARGE DIMENSION_MISMATCH RATE_LIMITED INTERNAL`.
@@ -210,7 +214,7 @@ Order: signed in + CSRF → upload limit (1500 / user / 24 h → 429) → `Conte
 multipart → field set exactly `meta, v2400, v1280, v640` → meta `{w,h,lqip}` → per file byte caps
 (2400 ≤ 2 MB, 1280 ≤ 700 KB, 640 ≤ 220 KB) → `parse_webp()` (§8.4) → dims: long edge of each =
 min(target, meta long edge), aspect within 1 % of meta, 2400 dims == meta dims → album exists, not deleted,
-live photos < 400 → new UUID → write the three files to a temp folder and rename it into place →
+live photos < 400 → new UUID → write the three files to a temp folder in `ikdirected-podaci/media/p/` and rename it into place →
 `Store::mutate` adds the row (position = max + 1; cover if none) → audit → 201. If the row cannot be added,
 the media folder is removed.
 
@@ -229,39 +233,41 @@ and client types entirely.
 
 ## 9. Media serving
 
-- Files: `public_html/media/p/{photoId}/{2400,1280,640}.webp`; photoId is a UUID the server generated.
-- `media/.htaccess`: only that pattern exists (everything else 404); `X-Content-Type-Options: nosniff`,
-  `Content-Security-Policy: default-src 'none'; sandbox`, `Cross-Origin-Resource-Policy: same-origin`,
-  `Content-Disposition: inline`, `Cache-Control: public, max-age=31536000, immutable`; no handler runs there
-  (PHP and CGI removed, scripts and HTML denied).
-- Same origin as the site (a separate subdomain would add DNS/SSL steps on shared hosting for little gain:
-  the bytes are a parsed plain WebP under a server-chosen name, SECURITY §7).
+- Files: `ikdirected-podaci/media/p/{photoId}/{2400,1280,640}.webp` — outside `public_html`, so a Git deploy can
+  never remove them; photoId is a UUID the server generated.
+- `public_html/media/` holds only `index.php` + `.htaccess` (in the package): every `/media/*` request goes to
+  index.php, which answers only `/media/p/<uuid>/<640|1280|2400>.webp` (everything else 404) with
+  `Content-Type: image/webp`, `X-Content-Type-Options: nosniff`, `Content-Security-Policy: default-src 'none'; sandbox`,
+  `Cross-Origin-Resource-Policy: same-origin`, `Content-Disposition: inline`,
+  `Cache-Control: public, max-age=31536000, immutable`, ETag/Last-Modified and 304. The bytes are sent as stored.
+- Same origin as the site; each image is one small PHP request (browser and CDN cache them for a year).
 - `srcset` = `640w, 1280w, 2400w` with the real intrinsic widths (never upscaled); LQIP `<img>` underneath.
-- Drafts' photos are reachable only by their unguessable UUID URL (same as before).
+- Drafts' photos are reachable only by their unguessable UUID URL.
 
 ---
 
-## 10. Publishing (`api/lib/publish.php`, `install.php`, `.github/workflows/`)
+## 10. Publishing (`api/lib/publish.php`, `.github/workflows/objava.yml`, hPanel Git)
 
 1. Every change marks the export pending. The next signed-in request after 20 s of quiet (the admin polls
-   `/publish` every 10 s) or "Objavi sada" pushes **only** `sadrzaj/sadrzaj.json` (the public export) as one
-   commit to branch `sadrzaj` and sends `repository_dispatch sadrzaj`. Never during a running build; changes
-   made meanwhile wait for the next one.
-2. `objava.yml` (`publish` job, needs `OBJAVA_UKLJUCENA = da`): main + that file → `npm run build` →
-   `npm run paket` → artifact `hosting`. Without the branch: an empty export (never demo content).
-   Push to main runs `npm run gate` first.
-3. The status poll (≤ every 8 s while building) or `/osvjezi` (postavi.yml, Cron) finds the run, downloads the
-   artifact (the token is not sent to the storage redirect) and installs it: assets → `api/` → HTML/XML/TXT →
-   `.htaccess` last; then removes files listed in the previous `.ik-paket.json` and not in the new one
-   (deleted albums). Never `media/*` (except its `.htaccess`), never `.well-known/`, only plain relative names.
-4. Public static pages are `Cache-Control: no-cache` (revalidate); `_astro/*` immutable.
+   `/publish` every 10 s), "Objavi sada", or `/osvjezi` (Cron) pushes **only** `sadrzaj/sadrzaj.json` (the public
+   export) as one commit to branch `sadrzaj` and sends `repository_dispatch sadrzaj` (run name `Objava <commit>`).
+   Never during a running publish; changes made meanwhile wait for the next one.
+2. `objava.yml` (job `objava`, needs `OBJAVA_UKLJUCENA = da`): main + that file → `npm run build` →
+   `npm run paket` (`.ik-paket.json` records the content commit) → one commit of `hosting/` to branch `hosting`
+   (rsync --delete: pages of deleted albums disappear). Without branch `sadrzaj`: an empty export, never demo
+   content. A push to main runs `npm run gate` first and republishes with the current content.
+3. hPanel "Deploy from Git" (branch `hosting` → `public_html`, auto-deploy webhook) pulls the commit.
+4. The status poll marks the publish done when `public_html/.ik-paket.json` names the content commit it sent; it
+   reports a failed or skipped run, and an error if the build succeeded but the hosting has not pulled it after
+   15 minutes. `.ik-paket.json` and `.git/` are 404 for visitors (dot paths).
+5. Static pages are `Cache-Control: no-cache` (revalidate); `_astro/*` immutable.
 
 ---
 
 ## 11. Purge (`Content::purge`, at most hourly after a signed-in request)
 
 Photos deleted > 7 days ago, and albums deleted > 7 days ago with all their photos, are removed from the store;
-their media folders are deleted; a purged album's slug goes to `retired_slugs` and is never given out again.
+their media folders (in `ikdirected-podaci/media`) are deleted; a purged album's slug goes to `retired_slugs` and is never given out again.
 The audit log rotates by size (≈ 2 MB total).
 
 ---

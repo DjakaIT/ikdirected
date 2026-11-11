@@ -7,7 +7,8 @@ where the photographer creates albums and uploads/deletes/reorders photos hersel
 ## Stack (Daniel, 2026-11-10: Hostinger instead of Cloudflare — see docs/ARCHITECTURE.md §1)
 Astro 6 **static output** (no Node at runtime) · admin API in **PHP 8.1+** (`api/`, no framework, no database:
 JSON store outside `public_html`) · hosting **Hostinger Unlimited** (LiteSpeed/Apache, `.htaccess`) ·
-GitHub Actions builds the site from the admin's public export; the API installs the package (model:
+GitHub Actions builds the site from the admin's public export and commits it to branch `hosting`, which hPanel
+Git deploys into `public_html` (model:
 CamelliaSinensis "uredništvo") · sign-in: password + TOTP, invites (ported from CamelliaSinensis) ·
 Preact islands **only in /admin** · vanilla TS on public pages · Vitest (unit + PHP API on `php -S`) ·
 Playwright + @axe-core/playwright against the built site · TypeScript strict.
@@ -62,7 +63,8 @@ PHP for local runs: `.tools/php/` (portable PHP 8.4, git-ignored; docs/TESTING.m
 - Never render user text with `set:html`. Astro escapes by default — keep it that way.
 - No server-rendered `style="…"` attributes on public pages (strict CSP). Classes + width/height.
 - Images: never accept SVG, never decode or transform uploads on the server (parse the WebP container only),
-  uploads are served only from `/media/` under its locked `.htaccess`, never trust client MIME.
+  uploads live outside `public_html` (`ikdirected-podaci/media`) and are sent only by `media/index.php`; nothing that
+  must survive a deploy may live in `public_html`; never trust client MIME.
 - PHP must run on **PHP 8.1** (Hostinger lets the version change): no 8.2+ syntax.
 - `.htaccess` rules and `scripts/dev-router.php` (their local emulation) change together.
 - Accessibility is a gate, not polish: axe must report 0 serious/critical on every route.
