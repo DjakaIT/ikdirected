@@ -1,16 +1,18 @@
 <?php
-// Publishing from the hosting (no Node.js there; model: CamelliaSinensis objava.php). After a change, the public
-// export (export.php — metadata only, photos stay on the hosting) goes into one commit on GitHub, branch
-// "sadrzaj" (also an off-site history of what was public), and a build is requested (repository_dispatch).
-// GitHub Actions (.github/workflows/objava.yml, code from main) builds the site and keeps the package; this side
-// downloads it and installs it into public_html (install.php) — as soon as the build is done (status polls from
-// the open admin) and through /api/admin/osvjezi (postavi.yml after every build, optional hPanel Cron Job).
-// Changes are batched: a build starts after QUIET_MS without further edits, or at once with "Objavi sada".
-// The token is fine-grained, only for this repository (Contents: read/write, Actions: read), stored only here.
+// Publishing from the hosting (no Node.js there; model: CamelliaSinensis objava.php, deploy through hPanel Git).
+// After a change, the public export (export.php — metadata only, photos stay on the hosting) goes into one commit
+// on GitHub branch "sadrzaj" and a build is requested (repository_dispatch). GitHub Actions (objava.yml, code from
+// main) builds the site and commits it to branch "hosting"; hPanel's Git deployment (Deploy from Git, auto-deploy)
+// pulls that branch into public_html. A publish is done when the deployed public_html/.ik-paket.json names the
+// content commit that was sent. Changes are batched: a build starts after QUIET_MS without edits, or at once
+// with "Objavi sada". The token is fine-grained, only for this repository (Contents: read/write, Actions: read).
 declare(strict_types=1);
 
 const QUIET_MS = 20_000;
 const EXPORT_PATH = 'sadrzaj/sadrzaj.json';
+const PACKAGE_MANIFEST = '.ik-paket.json';
+/** after a successful build, how long Hostinger may take to pull the hosting branch */
+const DEPLOY_WAIT_MS = 15 * 60_000;
 
 final class GitHub
 {
@@ -47,20 +49,6 @@ final class GitHub
             404 => 'Repozitorij ne postoji ili mu token nema pristup.',
             default => "GitHub je odgovorio $s" . (is_array($j) && isset($j['message']) ? ": {$j['message']}" : ''),
         });
-    }
-
-    /** a build package: GitHub answers with a redirect to temporary storage, which never gets the token */
-    public function download(string $url, string $target, int $max): void
-    {
-        if (!str_starts_with($url, rtrim($this->api, '/') . '/')) throw new ApiError(502, 'INTERNAL', 'Neočekivana adresa paketa stranice.');
-        [$s, $body, $h] = self::http('GET', $url, $this->headers(), null);
-        if (in_array($s, [301, 302, 303, 307, 308], true) && preg_match('#^https?://#', $h['location'] ?? '')) {
-            [$s, $body] = self::http('GET', $h['location'], ['User-Agent: ikdirected-admin'], null, 120);
-        }
-        if ($s === 401 || $s === 403) throw new ApiError(502, 'INTERNAL', 'GitHub token nema dopuštenje Actions: read — paket stranice se ne može preuzeti.');
-        if ($s !== 200) throw new ApiError(502, 'INTERNAL', "Preuzimanje paketa stranice nije uspjelo (odgovor $s).");
-        if (strlen($body) > $max) throw new ApiError(502, 'INTERNAL', 'Paket stranice je prevelik.');
-        write_atomic($target, $body);
     }
 
     /** @return array{0:int, 1:string, 2:array<string,string>} status, body and response headers (redirects not followed) */
@@ -104,8 +92,8 @@ final class Publisher
     private string $pendingFile;
     private string $refreshFile;
 
-    /** @param int $refreshGap least time (ms) between two GitHub checks from refresh() (tests: 0) */
-    public function __construct(private string $data, private string $api, private Installer $installer, private Closure $export, private int $refreshGap = 60_000)
+    /** @param int $refreshGap least time (ms) between two runs of refresh() (Cron; tests: 0) */
+    public function __construct(private string $data, private string $public, private string $api, private Closure $export, private int $refreshGap = 60_000)
     {
         $this->settingsFile = $data . '/objava-postavke.json';
         $this->stateFile = $data . '/objava.json';
@@ -123,7 +111,8 @@ final class Publisher
     public function publicSettings(): array
     {
         $p = $this->settings();
-        return ['repo' => $p['repo'] ?? '', 'branch' => $p['branch'] ?? 'sadrzaj', 'tokenSet' => !empty($p['token']), 'tokenExpires' => $p['tokenExpires'] ?? null];
+        return ['repo' => $p['repo'] ?? '', 'branch' => $p['branch'] ?? 'sadrzaj', 'tokenSet' => !empty($p['token']), 'tokenExpires' => $p['tokenExpires'] ?? null,
+            'deployed' => $this->deployed()];
     }
 
     /** save the settings and check the connection right away (the token is never sent back to the browser) */
@@ -134,12 +123,25 @@ final class Publisher
         $branch = is_string($branch) && trim($branch) !== '' ? trim($branch) : 'sadrzaj';
         $token = is_string($token) ? trim($token) : '';
         if (!preg_match('#^[A-Za-z0-9_.-]{1,100}/[A-Za-z0-9_.-]{1,100}$#', $repo)) throw new ApiError(422, 'VALIDATION', 'Repozitorij upiši kao vlasnik/repozitorij, npr. DjakaIT/ikdirected.');
-        if (!preg_match('#^[A-Za-z0-9._-]{1,60}$#', $branch) || str_contains($branch, '..') || $branch === 'main') throw new ApiError(422, 'VALIDATION', 'Grana za sadržaj: slova, brojke, . _ - (ne main).');
+        if (!preg_match('#^[A-Za-z0-9._-]{1,60}$#', $branch) || str_contains($branch, '..') || in_array($branch, ['main', 'hosting'], true)) {
+            throw new ApiError(422, 'VALIDATION', 'Grana za sadržaj: slova, brojke, . _ - (ne main ni hosting).');
+        }
         if ($token === '') $token = $p['token'] ?? '';
         if (!preg_match('/^(github_pat_|ghp_)[A-Za-z0-9_]{20,255}$/', $token)) throw new ApiError(422, 'VALIDATION', 'Upiši GitHub token (počinje s github_pat_).');
         $gh = new GitHub($this->api, $repo, $token);
         $gh->must('GET', '');
         write_json($this->settingsFile, ['repo' => $repo, 'branch' => $branch, 'token' => $token, 'tokenExpires' => $gh->expires]);
+    }
+
+    /** what hPanel deployed into public_html: {built, sha, content, origin} of the package, or null */
+    public function deployed(): ?array
+    {
+        try {
+            $m = read_json($this->public . '/' . PACKAGE_MANIFEST);
+        } catch (Throwable) {
+            return null;
+        }
+        return is_array($m) ? ['built' => $m['built'] ?? null, 'content' => $m['content'] ?? null, 'sha' => $m['sha'] ?? null] : null;
     }
 
     private function state(): array { return read_json($this->stateFile, ['state' => 'ready', 'published' => null]); }
@@ -149,63 +151,59 @@ final class Publisher
     /** the content changed (inside the store lock): publish after a quiet moment */
     public function changed(): void { write_json($this->pendingFile, ['pending' => true, 'changedAt' => now_ms()]); }
 
-    /** status for the admin; while a build runs, GitHub is asked at most every 8 s and a finished build is installed */
+    /**
+     * status for the admin. While a publish runs: done as soon as public_html holds the package built from the
+     * content commit that was sent; meanwhile GitHub is asked at most every 8 s whether the build failed.
+     */
     public function status(): array
     {
         $s = $this->state();
         $pending = $this->pending();
         $gh = $this->github();
         if (!$gh) return ['state' => 'unconfigured', 'published' => $s['published'] ?? null, 'message' => null, 'pending' => $pending['pending']];
-        if (($s['state'] ?? '') === 'building' && now_ms() - ($s['checked'] ?? 0) >= 8000) {
-            $s['checked'] = now_ms();
-            try {
-                [$st, $j] = $gh->request('GET', '/actions/runs?event=repository_dispatch&per_page=20');
-                if ($st === 403) throw new ApiError(502, 'INTERNAL', 'GitHub token nema dopuštenje Actions: read — stanje objave nije vidljivo.');
-                if ($st !== 200) throw new ApiError(502, 'INTERNAL', "GitHub je odgovorio $st");
-                $run = null;
-                foreach ($j['workflow_runs'] ?? [] as $r) if (str_contains((string) ($r['display_title'] ?? ''), $s['sha'])) { $run = $r; break; }
-                if (!$run) {
-                    if (now_ms() - $s['started'] > 10 * 60_000) $s = [...$s, 'state' => 'error', 'message' => 'GitHub Actions nije pokrenuo objavu (je li objava.yml na grani main i OBJAVA_UKLJUCENA = da?).'];
-                } elseif (($run['status'] ?? '') === 'completed') {
-                    $s = match ($run['conclusion'] ?? '') {
-                        'success' => $this->installBuild($gh, $run, $s),
-                        'skipped' => [...$s, 'state' => 'error', 'message' => 'Objava je isključena na GitHubu (varijabla OBJAVA_UKLJUCENA).'],
-                        default => [...$s, 'state' => 'error', 'message' => 'Izgradnja stranice nije uspjela: ' . ($run['html_url'] ?? '')],
-                    };
-                } elseif ($this->installer->artifact($gh, $run)) {
-                    // the package is ready (last step of the job) while GitHub may report the run as running for minutes
-                    $s = $this->installBuild($gh, $run, $s);
+        if (($s['state'] ?? '') === 'building') {
+            if (($this->deployed()['content'] ?? null) === $s['sha']) {
+                $s = $this->saveState([...$s, 'state' => 'ready', 'published' => iso_time(), 'message' => null]);
+            } elseif (now_ms() - ($s['checked'] ?? 0) >= 8000) {
+                $s['checked'] = now_ms();
+                try {
+                    $s = $this->checkRun($gh, $s);
+                } catch (ApiError $e) {
+                    $s['message'] = $e->getMessage(); // a passing connection problem: checked again
                 }
-            } catch (ApiError $e) {
-                $s['message'] = $e->getMessage(); // a passing connection problem: checked again
+                $this->saveState($s);
             }
-            $this->saveState($s);
         }
-        return self::view($s, $pending['pending']);
+        return ['state' => $s['state'] ?? 'ready', 'published' => $s['published'] ?? null, 'message' => $s['message'] ?? null, 'pending' => $pending['pending']];
     }
 
-    private static function view(array $s, bool $pending): array
+    /** the GitHub side of a running publish: not started, failed, or built and waiting for hPanel's Git deploy */
+    private function checkRun(GitHub $gh, array $s): array
     {
-        return ['state' => $s['state'] ?? 'ready', 'published' => $s['published'] ?? null, 'message' => $s['message'] ?? null, 'pending' => $pending];
-    }
-
-    private function installBuild(GitHub $gh, array $run, array $s): array
-    {
-        try {
-            if (!$this->installer->installed($run)) {
-                $a = $this->installer->artifact($gh, $run);
-                if (!$a) return [...$s, 'state' => 'error', 'message' => 'GitHub nije spremio paket stranice — je li varijabla OBJAVA_UKLJUCENA = da?'];
-                $this->installer->install($gh, $run, $a);
-                if (!$this->installer->installed($run)) return $s; // another request is installing right now: checked again
-            }
-            return [...$s, 'state' => 'ready', 'published' => iso_time(), 'message' => null];
-        } catch (Throwable $e) {
-            error_log('[ikdirected] install: ' . $e->getMessage());
-            return [...$s, 'state' => 'error', 'message' => 'Stranica je izgrađena, ali postavljanje na hosting nije uspjelo: ' . ($e instanceof ApiError ? $e->getMessage() : 'greška na poslužitelju')];
+        [$st, $j] = $gh->request('GET', '/actions/runs?event=repository_dispatch&per_page=20');
+        if ($st === 403) throw new ApiError(502, 'INTERNAL', 'GitHub token nema dopuštenje Actions: read — stanje objave nije vidljivo.');
+        if ($st !== 200) throw new ApiError(502, 'INTERNAL', "GitHub je odgovorio $st");
+        $run = null;
+        foreach ($j['workflow_runs'] ?? [] as $r) if (str_contains((string) ($r['display_title'] ?? ''), $s['sha'])) { $run = $r; break; }
+        if (!$run) {
+            if (now_ms() - $s['started'] > 10 * 60_000) return [...$s, 'state' => 'error', 'message' => 'GitHub Actions nije pokrenuo objavu (je li objava.yml na grani main i OBJAVA_UKLJUCENA = da?).'];
+            return $s;
         }
+        if (($run['status'] ?? '') !== 'completed') return $s;
+        return match ($run['conclusion'] ?? '') {
+            'success' => (function () use ($s) {
+                $s['builtAt'] ??= now_ms();
+                if (now_ms() - $s['builtAt'] > DEPLOY_WAIT_MS) {
+                    return [...$s, 'state' => 'error', 'message' => 'Stranica je izgrađena (grana hosting), ali Hostinger još nije preuzeo novu verziju. hPanel → Git: je li uključeno automatsko postavljanje grane hosting?'];
+                }
+                return [...$s, 'message' => null];
+            })(),
+            'skipped' => [...$s, 'state' => 'error', 'message' => 'Objava je isključena na GitHubu (varijabla OBJAVA_UKLJUCENA).'],
+            default => [...$s, 'state' => 'error', 'message' => 'Izgradnja stranice nije uspjela: ' . ($run['html_url'] ?? '')],
+        };
     }
 
-    /** publish what is waiting: after QUIET_MS without changes, or now; never while a build runs */
+    /** publish what is waiting: after QUIET_MS without changes, or now; never while a publish runs */
     public function maybePublish(bool $now = false): void
     {
         $gh = $this->github();
@@ -225,7 +223,7 @@ final class Publisher
         $started = now_ms();
         try {
             if (($this->state()['state'] ?? '') === 'building' || !$this->pending()['pending']) return;
-            write_json($this->pendingFile, ['pending' => false, 'changedAt' => 0]); // a change from now on waits for the next build
+            write_json($this->pendingFile, ['pending' => false, 'changedAt' => 0]); // a change from now on waits for the next publish
             $export = ($this->export)();
             [$st, $ref] = $gh->request('GET', '/git/ref/heads/' . rawurlencode($branch));
             if ($st !== 200 && $st !== 404) $gh->must('GET', '/git/ref/heads/' . rawurlencode($branch));
@@ -254,42 +252,19 @@ final class Publisher
     }
 
     /**
-     * /api/admin/osvjezi (postavi.yml after each build; hPanel Cron Job as a safety net): install the newest
-     * successful build of objava.yml on main if it is newer than the installed one (code changes, or an edit whose
-     * browser closed before the build finished), and publish waiting changes. Public (no sign-in): installs only
-     * builds of this repository; asks GitHub at most once per refreshGap.
+     * /api/admin/osvjezi (optional hPanel Cron Job): publishes what waits and finishes a running publish even when
+     * no admin page is open (an edit whose browser closed before the build). Public, at most once per refreshGap.
      */
     public function refresh(): array
     {
-        $gh = $this->github();
-        if (!$gh) return ['state' => 'nije-postavljeno'];
+        if (!$this->github()) return ['state' => 'nije-postavljeno'];
         $o = read_json($this->refreshFile, []);
         if (now_ms() - ($o['checked'] ?? 0) < $this->refreshGap) return ['state' => 'pricekaj'];
         write_json($this->refreshFile, ['checked' => now_ms()]);
         try {
-            $repo = strtolower((string) ($this->settings()['repo'] ?? ''));
-            [$st, $j] = $gh->request('GET', '/actions/runs?branch=main&status=success&per_page=20');
-            if ($st !== 200) throw new ApiError(502, 'INTERNAL', "GitHub je odgovorio $st");
-            $tried = 0;
-            foreach ($j['workflow_runs'] ?? [] as $run) {
-                if (!in_array($run['event'] ?? '', ['push', 'repository_dispatch', 'workflow_dispatch'], true) || ($run['head_branch'] ?? '') !== 'main'
-                    || ($run['conclusion'] ?? '') !== 'success' || strtolower((string) ($run['head_repository']['full_name'] ?? '')) !== $repo
-                    || !preg_match('#(^|/)objava\.yml(@|$)#', (string) ($run['path'] ?? ''))) continue;
-                if ($this->installer->installed($run)) { $this->maybePublish(); return ['state' => 'aktualno']; }
-                if (++$tried > 5) break;
-                $a = $this->installer->artifact($gh, $run);
-                if (!$a) continue; // publishing was off for that build: an older one
-                if (!$this->installer->install($gh, $run, $a)) return ['state' => 'u-tijeku'];
-                $s = $this->state();
-                $startedRun = strtotime((string) ($run['created_at'] ?? '')) ?: 0;
-                if (($s['state'] ?? '') === 'building' && $startedRun * 1000 >= ($s['started'] ?? PHP_INT_MAX) - 1000) {
-                    $this->saveState([...$s, 'state' => 'ready', 'published' => iso_time(), 'message' => null]);
-                }
-                $this->maybePublish();
-                return ['state' => 'postavljeno'];
-            }
+            $st = $this->status();
             $this->maybePublish();
-            return ['state' => 'aktualno'];
+            return ['state' => match ($st['state']) { 'building' => 'u-tijeku', 'error' => 'greska', default => 'aktualno' }];
         } catch (Throwable $e) {
             error_log('[ikdirected] refresh: ' . $e->getMessage());
             return ['state' => 'greska'];

@@ -338,8 +338,10 @@ function PublishDialog({ open, status, onClose, onSaved }: { open: boolean; stat
       }
     >
       <p class="acct__help">
-        Nakon promjena javna stranica se nanovo izgradi na GitHubu (oko 2 minute) i sama postavi na hosting.
+        Nakon promjena javna stranica se nanovo izgradi na GitHubu (oko 2 minute), a Hostinger je preuzme s grane
+        hosting (hPanel → Git, automatsko postavljanje).
         {status?.published && ` Zadnja objava: ${time(status.published)}.`}
+        {settings?.deployed?.built && ` Na hostingu je verzija izgrađena ${time(settings.deployed.built)}.`}
       </p>
       {status?.state === "error" && status.message && <p class="auth__error">{status.message}</p>}
       <form ref={form} class="acct__form" onSubmit={(e) => (e.preventDefault(), void save())}>

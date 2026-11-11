@@ -209,6 +209,8 @@ export interface PublishSettings {
   branch: string;
   tokenSet: boolean;
   tokenExpires: string | null;
+  /** the package hPanel's Git deploy put into public_html (null before the first deploy) */
+  deployed: { built: string | null; content: string | null; sha: string | null } | null;
 }
 
 const authPost = <T>(path: string, body: unknown = {}) => send<T>({ method: "POST", path: `/auth${path}`, body, auth: true });

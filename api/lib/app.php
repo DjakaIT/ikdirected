@@ -21,7 +21,6 @@ final class App
     private Limits $limits;
     private FirstSetup $setup;
     private Publisher $publisher;
-    private Installer $installer;
     private bool $production;
     private string $origin;
     private string $data;
@@ -35,8 +34,7 @@ final class App
         $this->production = !$c['local'];
         $this->data = $c['data'];
         $mediaDir = $c['media'];
-        // tests only (IK_TEST=1, never on the hosting): every e2e test gets its own data and media folders
-        if ($c['test'] && is_string($ns = $_COOKIE['ik-test-ns'] ?? null) && preg_match('/^[a-z0-9-]{8,64}$/', $ns)) {
+        if ($ns = ik_test_namespace($c)) {
             $this->data .= "/ns/$ns";
             $mediaDir .= "/ns/$ns";
         }
@@ -55,8 +53,7 @@ final class App
             'all' => ['windowMs' => 15 * 60_000, 'max' => 200], 'upload' => ['windowMs' => 24 * 3600_000, 'max' => 1500],
         ]);
         $this->setup = new FirstSetup($this->data, $this->origin);
-        $this->installer = new Installer($this->data, $c['public']);
-        $this->publisher = new Publisher($this->data, $c['githubApi'], $this->installer, fn () => public_export($this->store->read()), $c['refreshMs'] ?? 60_000);
+        $this->publisher = new Publisher($this->data, $c['public'], $c['githubApi'], fn () => public_export($this->store->read()), $c['refreshMs'] ?? 60_000);
         $this->store->afterChange = function (array $state): void {
             write_json($this->data . '/izvoz.json', public_export($state)); // local builds read this (npm run build:local)
             $this->publisher->changed();
@@ -409,7 +406,7 @@ final class App
                 $this->send(200, $this->publisher->publicSettings());
                 return;
             }
-            // postavi.yml after every build, or an hPanel Cron Job: install the newest build; no sign-in
+            // optional hPanel Cron Job: publish what waits, finish a running publish; no sign-in
             case 'GET /osvjezi': {
                 $this->send(200, $this->publisher->refresh());
                 return;

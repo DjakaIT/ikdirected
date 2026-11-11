@@ -3,13 +3,10 @@
 // Emulates public/.htaccess, media/.htaccess and api/.htaccess closely enough for the e2e tests; production uses
 // the .htaccess files, never this script. Security headers are read from the built .htaccess files themselves,
 // so tests check the exact strings that ship. Never deployed.
-// Env: IK_DIST (built site), IK_MEDIA (uploaded photos), plus the API's own (api/index.php).
+// Env: IK_DIST (built site), plus those of api/lib/config.php (IK_PODACI, IK_MEDIA, IK_JAVNO, IK_LOKALNO, IK_TEST).
 declare(strict_types=1);
 
 $dist = rtrim((string) getenv('IK_DIST'), '/\\');
-$media = rtrim((string) getenv('IK_MEDIA'), '/\\');
-// tests only: every e2e/API test has its own media folder (same rule as App in api/lib/app.php)
-if (getenv('IK_TEST') === '1' && is_string($ns = $_COOKIE['ik-test-ns'] ?? null) && preg_match('/^[a-z0-9-]{8,64}$/', $ns)) $media .= "/ns/$ns";
 $path = rawurldecode((string) parse_url((string) ($_SERVER['REQUEST_URI'] ?? '/'), PHP_URL_PATH));
 
 /**
@@ -81,21 +78,11 @@ if ($path === '/api' || str_starts_with($path, '/api/')) {
     return true;
 }
 
-// ---- media/.htaccess ----
+// ---- media/.htaccess: everything under /media/ goes to the photo route (the files live outside public_html) ----
 if ($path === '/media' || str_starts_with($path, '/media/')) {
-    $rel = substr($path, strlen('/media/'));
-    $h = htaccess_headers("$dist/media/.htaccess", $path);
-    if (preg_match('#^p/([0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})/(640|1280|2400)\.webp$#', $rel, $m)) {
-        if (is_file("$media/$rel")) return serve_file("$media/$rel", 200, $h);
-        // tests only: photos of the seeded demo content are the placeholder images
-        $map = getenv('IK_TEST') === '1' && is_file("$media/seed-map.json") ? (json_decode((string) file_get_contents("$media/seed-map.json"), true) ?: []) : [];
-        $ph = $map[$m[1]] ?? null;
-        if (is_string($ph) && preg_match('/^ph-\d{2}$/', $ph) && is_file("$dist/placeholder/p/$ph/{$m[2]}.webp")) {
-            return serve_file("$dist/placeholder/p/$ph/{$m[2]}.webp", 200, $h);
-        }
-    }
-    http_response_code(404);
-    send_headers($h);
+    send_headers(htaccess_headers(dirname(__DIR__) . '/media/.htaccess', $path));
+    $_SERVER['SCRIPT_NAME'] = '/media/index.php';
+    require dirname(__DIR__) . '/media/index.php';
     return true;
 }
 

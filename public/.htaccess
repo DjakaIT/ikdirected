@@ -1,6 +1,7 @@
 # ikdirected — public_html/.htaccess (Hostinger: LiteSpeed/Apache + PHP; docs/ARCHITECTURE.md §1).
-# The site is static HTML (Astro build). /api/ is the PHP admin backend (api/.htaccess), /media/ holds uploaded
-# photos (media/.htaccess). scripts/dev-router.php emulates these rules for local tests: keep both in step.
+# public_html is deployed by hPanel Git from branch "hosting". The site is static HTML (Astro build); /api/ is the
+# PHP admin backend (api/.htaccess), /media/ the photo route (media/.htaccess; the photos live outside public_html).
+# scripts/dev-router.php emulates these rules for local tests: keep both in step.
 Options -Indexes -MultiViews
 DirectoryIndex index.html
 # /radovi is both radovi.html and the folder radovi/: never add a slash, and let mod_rewrite see such requests.
@@ -58,6 +59,10 @@ Header always set Content-Security-Policy "frame-ancestors 'none'; base-uri 'non
 Header always set X-Robots-Tag "noindex, nofollow"
 Header always set Cache-Control "no-store"
 </If>
+<ElseIf "%{REQUEST_URI} =~ m#^/(api|media)/#">
+# caching of the API and the photo route is set by their PHP (api/.htaccess, media/index.php)
+Header always unset X-Powered-By
+</ElseIf>
 <ElseIf "%{REQUEST_URI} =~ m#^/_astro/#">
 Header set Cache-Control "public, max-age=31536000, immutable"
 </ElseIf>
