@@ -63,7 +63,8 @@ Removed (H1): @astrojs/cloudflare, wrangler, @cloudflare/vitest-pool-workers.
 - 2026-11-10 Publish batches edits: 20 s quiet or "Objavi sada"; never during a running build.
 - 2026-11-10 Pagination moved from ?stranica=N to /radovi/stranica/N (static files); a query string on a
   static page is served (canonical names the address) instead of 404.
-- 2026-11-10 Without branch sadrzaj the production build uses an empty export, never the demo albums.
+- 2026-11-12 Daniel (reverses 11-10): without branch sadrzaj the production build keeps the demo gallery;
+  the first admin export replaces it. Never change what Daniel did not ask for.
 - 2026-11-10 Sign-in copy written in neutral ti-form (not in DESIGN §9 yet): Prijava, Kod s mobitela,
   Postavljanje administracije, Dvostruka potvrda, Spremi rezervne kodove, Pozivnica…; top bar status
   "Stranica je ažurna / Čeka objavu / Objavljujem… / Objava nije uspjela / Objava nije postavljena".
