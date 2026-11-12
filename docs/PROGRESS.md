@@ -31,7 +31,10 @@ static Astro site + PHP admin API (`api/`) + publishing via GitHub Actions. Clou
 - [x] H6 docs: CLAUDE.md, ARCHITECTURE, SECURITY, TESTING, SETUP (hr, Hostinger + Porkbun), VODIC (hr)
       Gate green: check 0 errors, 122 vitest (40 unit + 82 PHP API), 246 e2e (3 projects).
 - [x] 2026-11-12 merged into main (PR #1); CI gate green on Linux (PHP 8.3); non-breaking audit fixes (vite 7.3.8, zod 4.6.7)
+- [x] 2026-11-12 contact form beside "Pišite mi" (footer, all public pages): front-end validation, mailto: until the
+      mail endpoint (Daniel: mail later, together). Gate green: 138 vitest, 258 e2e.
 - [ ] H7 Astro 7 upgrade; budgets spec on serve.mjs; copy audit; eslint/prettier + noUncheckedIndexedAccess
+- [ ] Contact mail endpoint (api/, with Daniel): POST from the form, rate limit + honeypot, SEC tests
 
 ## Installed versions
 astro 6.4.8 · @astrojs/preact 5.1.5 · preact 10.29.8 · @preact/signals 2.11.2 · sortablejs 1.15.7 ·
@@ -66,13 +69,21 @@ Removed (H1): @astrojs/cloudflare, wrangler, @cloudflare/vitest-pool-workers.
   "Stranica je ažurna / Čeka objavu / Objavljujem… / Objava nije uspjela / Objava nije postavljena".
 - 2026-11-10 E2E isolation: cookie ik-test-ns → own data/media folders (IK_LOKALNO=1 + IK_TEST=1 only).
 
+- 2026-11-12 Contact form errors use --danger on public pages (clarity over the admin-only token note).
+  Form hidden without JS (no endpoint to submit to yet; mailto/phone links stay).
+- 2026-11-12 Hostinger reality: site ikdirected.com was created as a Node.js/Astro build of `main` (no api/, demo
+  content). Its auto-deploy was removed (files kept); API refuses a static deploy on a Node.js site and classic Git
+  needs an empty public_html → Daniel renames public_html, then classic Git of branch `hosting` + hPanel webhook.
+  DNS stays at Porkbun: A @ 82.198.229.93, CNAME www → ikdirected.com; SSL active (lifetime, HTTPS redirect on).
+
 ## Blockers
 - 2026-11-12 npm audit: Astro 6 advisories (incl. AVIF "critical") fixed only in Astro 7; not applicable to static
   output with passthrough images. CI audit step is non-blocking until the Astro 7 upgrade (H7).
 
 ## Waiting on Daniel / client
-- Hosting setup per docs/SETUP.md (GitHub variables + first Objava run → branch hosting; hPanel Create site →
-  Deploy from Git; Porkbun nameservers; first account; token; invite Ivana)
+- Hosting: GitHub variables + branch hosting done; DNS + SSL done. Left: rename public_html (File Manager) →
+  classic Git clone of `hosting` → webhook for auto-deploy → cron osvjezi → first account; token; invite Ivana.
+  Then rewrite SETUP.md §2–3 to that flow (keep Porkbun DNS, not nameservers).
 - Real domain → GitHub variable SITE_ORIGIN; email, phone, prices, FAQ answers, review → `src/content/site.ts`
 - Category intros in site.ts drafted from reference facts only — client must approve (TODO(client))
 - Approve the sign-in copy (then move it into DESIGN §9)
@@ -81,4 +92,5 @@ Removed (H1): @astrojs/cloudflare, wrangler, @cloudflare/vitest-pool-workers.
 - Apache/LiteSpeed rules are emulated locally, not run: check SETUP §8 on the hosting once
 
 ## Next session starts at
-H7 — budgets spec against scripts/serve.mjs (tests/e2e/budgets.spec.ts), then the copy audit (P7.4 + sign-in copy).
+If public_html on Hostinger is empty/renamed: hosting_git_deploy-website-repository (https URL, branch hosting),
+verify /api/admin/auth/state JSON, then SETUP.md rewrite. Otherwise H7 — budgets spec (tests/e2e/budgets.spec.ts).

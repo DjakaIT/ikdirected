@@ -297,6 +297,11 @@ no placeholder-as-label · `lang="hr"` · zoom 200 % works · touch targets ≥ 
 | alb.back | Sva {kategorija u množini} (e.g. "Sva vjenčanja", "Svi eventi", "Svi portreti", "Svi kadrovi iz zraka") |
 | alb.cta | Vaš datum je slobodan? Provjerite. |
 | 404.text | Ova stranica ne postoji ili je premještena. |
+| contact.form (aria) | Pošaljite upit |
+| contact.fields | Ime · Prezime · E-mail · Naslov zahtjeva · Poruka (mono labels numbered 01–05, numbers aria-hidden) |
+| contact.submit | Pošalji |
+| contact.err | Upišite ime. · Upišite prezime. · Upišite e-mail adresu. · E-mail adresa nije ispravna. · Upišite naslov zahtjeva. · Napišite poruku. · (status) Provjerite označena polja. |
+| contact.prepared (mailto until the mail endpoint) | Poruka je pripremljena u vašoj aplikaciji za e-poštu. · Otvori e-poštu → |
 
 Croatian plurals: 1 fotografija · 2–4 fotografije · 5+ fotografija (and 11–14 → fotografija).
 Same rule for priča (1 priča, 2–4 priče, 5+ priča). Implement `plural(n, one, few, many)` with tests.
