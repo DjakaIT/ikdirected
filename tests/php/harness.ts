@@ -35,7 +35,7 @@ export async function startPhp(extraEnv: Record<string, string> = {}): Promise<P
   const media = join(tmp, "media");
   const { bin, args } = phpCommand() as { bin: string; args: string[] };
   const child: ChildProcess = spawn(bin, [...args, "-S", `127.0.0.1:${port}`, join(ROOT as string, "scripts", "dev-router.php")], {
-    stdio: ["ignore", "ignore", "pipe"],
+    stdio: "ignore",
     env: {
       ...process.env,
       IK_DIST: join(ROOT as string, "dist"),

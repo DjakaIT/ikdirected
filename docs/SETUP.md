@@ -15,7 +15,7 @@ i domena na Porkbunu. GitHub Actions: javni repozitorij neograničeno, privatni 
 ---
 
 ## 1. GitHub (repozitorij `DjakaIT/ikdirected`) — prvo, jer grana `hosting` mora postojati
-1. Spoji granu `build/atelier-cms` u `main` (pull request → merge). Na `main` se uvijek pokrenu provjere.
+1. Kod je već na grani `main` (spojeno 12.11.2026.). Na `main` se kod svake promjene koda pokrenu provjere.
 2. **Settings → Secrets and variables → Actions → Variables → New repository variable**:
    - `SITE_ORIGIN` = `https://<domena>` (bez kose crte na kraju)
    - `OBJAVA_UKLJUCENA` = `da` (bez nje GitHub samo provjerava kod i ništa ne objavljuje)
@@ -28,7 +28,7 @@ i domena na Porkbunu. GitHub Actions: javni repozitorij neograničeno, privatni 
    mapa **`public_html`** → domena s Porkbuna → **Deploy**.
 2. Provjeri da je uključeno **automatsko postavljanje** (*Auto-deployment*): svaki novi commit na grani `hosting`
    Hostinger povuče sam.
-3. **Advanced → PHP Configuration**: PHP **8.3 ili 8.4**; proširenja `mbstring`, `curl`, `zip`, `json`
+3. **Advanced → PHP Configuration**: PHP **8.3 ili 8.4**; proširenja `mbstring`, `curl`, `json`
    (i `intl`, `fileinfo` ako ih ima). Ako nešto nedostaje, `/api/admin/auth/state` to i napiše.
 4. Na nadzornoj ploči stranice (*Plan details*) prepiši **dva nameservera** koja hPanel pokaže
    (npr. `ns1.dns-parking.com` / `ns2.dns-parking.com`, ali uzmi točno ona koja piše).
