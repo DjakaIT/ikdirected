@@ -76,12 +76,14 @@ jobs:
             git fetch --depth=1 origin sadrzaj
             git show FETCH_HEAD:sadrzaj/sadrzaj.json > sadrzaj/sadrzaj.json
             echo "sha=$(git rev-parse FETCH_HEAD)" >> "$GITHUB_OUTPUT"
+            echo "file=sadrzaj/sadrzaj.json" >> "$GITHUB_OUTPUT"
             echo "albuma: $(node -p "require('./sadrzaj/sadrzaj.json').albums.length")"
           else
-            # never the demo content on the real site: before the first publish the site has no albums
-            echo '{"format":1,"albums":[],"photos":[]}' > sadrzaj/sadrzaj.json
+            # Daniel 2026-11-12: until the first publish from the admin the site keeps the demo gallery (the photos
+            # already in place); the first export from the admin replaces it
             echo "sha=" >> "$GITHUB_OUTPUT"
-            echo "Grana sadrzaj još ne postoji — stranica se gradi bez albuma."
+            echo "file=" >> "$GITHUB_OUTPUT"
+            echo "Grana sadrzaj još ne postoji — stranica se gradi s postojećom galerijom."
           fi
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
@@ -90,7 +92,7 @@ jobs:
       - run: npm ci
       - run: npm run build
         env:
-          IK_SADRZAJ: sadrzaj/sadrzaj.json
+          IK_SADRZAJ: ${{ steps.sadrzaj.outputs.file }}
           SITE_ORIGIN: ${{ vars.SITE_ORIGIN }}
       - run: npm run paket
         env:
