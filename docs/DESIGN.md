@@ -298,7 +298,7 @@ no placeholder-as-label · `lang="hr"` · zoom 200 % works · touch targets ≥ 
 | alb.cta | Vaš datum je slobodan? Provjerite. |
 | 404.text | Ova stranica ne postoji ili je premještena. |
 | contact.form (aria) | Pošaljite upit |
-| contact.fields | Ime · Prezime · E-mail · Naslov zahtjeva · Poruka (mono labels numbered 01–05, numbers aria-hidden) |
+| contact.fields | Ime · Prezime · E-mail · Naslov zahtjeva · Poruka (mono labels) |
 | contact.submit | Pošalji |
 | contact.err | Upišite ime. · Upišite prezime. · Upišite e-mail adresu. · E-mail adresa nije ispravna. · Upišite naslov zahtjeva. · Napišite poruku. · (status) Provjerite označena polja. |
 | contact.prepared (mailto until the mail endpoint) | Poruka je pripremljena u vašoj aplikaciji za e-poštu. · Otvori e-poštu → |

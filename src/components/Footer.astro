@@ -3,20 +3,22 @@ import { site } from "../content/site";
 import { CONTACT_MAX } from "../lib/contact";
 const year = new Date().getFullYear();
 const form = site.contact.form;
+// two pairs side by side, then the message across both columns
 const fields = [
-  { id: "ime", type: "text", auto: "given-name", wide: false },
-  { id: "prezime", type: "text", auto: "family-name", wide: false },
-  { id: "email", type: "email", auto: "email", wide: true },
-  { id: "naslov", type: "text", auto: "off", wide: true },
+  { id: "ime", type: "text", auto: "given-name" },
+  { id: "prezime", type: "text", auto: "family-name" },
+  { id: "email", type: "email", auto: "email" },
+  { id: "naslov", type: "text", auto: "off" },
 ] as const;
-const pad = (n: number) => String(n).padStart(2, "0");
 ---
 
 <footer class="foot" id="kontakt">
   <span class="m dim">{site.contact.label}</span>
-  <h2><a href={`mailto:${site.email}`}>{site.contact.heading[0]}<br />{site.contact.heading[1]}</a></h2>
-  <div class="foot__body">
-    <p class="foot__lead">{site.contact.lead}</p>
+  <div class="foot__top">
+    <div class="foot__say">
+      <h2><a href={`mailto:${site.email}`}>{site.contact.heading[0]}<br />{site.contact.heading[1]}</a></h2>
+      <p class="foot__lead">{site.contact.lead}</p>
+    </div>
     <form
       class="cf"
       aria-label={form.name}
@@ -28,11 +30,10 @@ const pad = (n: number) => String(n).padStart(2, "0");
       data-prepared={form.prepared}
     >
       {
-        fields.map((f, i) => (
-          <div class:list={["fld", { "fld--wide": f.wide }]}>
+        fields.map((f) => (
+          <div class="fld">
             <label class="m fld__lab" for={`cf-${f.id}`}>
-              <span>{form.fields[f.id]}</span>
-              <span class="num fld__no" aria-hidden="true">{pad(i + 1)}</span>
+              {form.fields[f.id]}
             </label>
             <span class="fld__ctl">
               <input
@@ -51,26 +52,20 @@ const pad = (n: number) => String(n).padStart(2, "0");
         ))
       }
       <div class="fld fld--wide">
-        <label class="m fld__lab" for="cf-poruka">
-          <span>{form.fields.poruka}</span>
-          <span class="num fld__no" aria-hidden="true">{pad(fields.length + 1)}</span>
-        </label>
+        <label class="m fld__lab" for="cf-poruka">{form.fields.poruka}</label>
         <span class="fld__ctl">
           <textarea
             id="cf-poruka"
             name="poruka"
-            rows="5"
+            rows="3"
             maxlength={CONTACT_MAX.poruka}
             required
             aria-describedby="cf-poruka-err"></textarea>
         </span>
-        <span class="fld__meta">
-          <span class="fld__err" id="cf-poruka-err" data-cf-err="poruka"></span>
-          <span class="m dim num" data-cf-count aria-hidden="true">0 / {CONTACT_MAX.poruka}</span>
-        </span>
+        <span class="fld__err" id="cf-poruka-err" data-cf-err="poruka"></span>
       </div>
       <div class="cf__send">
-        <button class="cf__btn" type="submit"><span>{form.submit}</span><span class="cf__arr" aria-hidden="true">→</span></button>
+        <button class="m cf__btn" type="submit">{form.submit} <span aria-hidden="true">→</span></button>
         <p class="cf__status" role="status" data-cf-status>
           <span data-cf-status-text></span>
           <a class="cf__open" href={`mailto:${site.email}`} data-cf-open hidden>{form.openMail}</a>
@@ -106,7 +101,6 @@ const pad = (n: number) => String(n).padStart(2, "0");
     color: var(--fg);
   }
   h2 {
-    margin-top: var(--s-4);
     font-size: clamp(2.6rem, 12vw, 11rem);
     line-height: 0.86;
     font-weight: 600;
@@ -121,29 +115,45 @@ const pad = (n: number) => String(n).padStart(2, "0");
   h2 a:hover {
     opacity: 0.55;
   }
-  .foot__body {
-    display: grid;
-    gap: var(--s-7);
-    margin-top: 26px;
-  }
-  @media (min-width: 960px) {
-    .foot__body {
-      grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
-      gap: clamp(48px, 7vw, 128px);
-      align-items: start;
-    }
-  }
   .foot__lead {
     max-width: 42ch;
+    margin-top: 26px;
     font-size: clamp(1rem, 1.5vw, 1.25rem);
   }
 
-  /* contact form — hairlines, mono labels, big type; square like the rest of the site */
+  /* "Pišite mi" left, the form beside it on the right: tops aligned, outer edges on the page padding */
+  .foot__top {
+    display: grid;
+    gap: var(--s-7);
+    margin-top: var(--s-4);
+  }
+  /* same four columns and gap as the facts row (.foot__g): "Pišite mi" takes the first two, the form the last
+     two, so the form starts under "Instagram" and its second column under "Adresa" */
+  @media (min-width: 1000px) {
+    .foot__top {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      column-gap: var(--s-5);
+    }
+    .foot__say {
+      grid-column: 1 / span 2;
+    }
+    /* the message grows so the button ends where the lead ends (bottoms aligned) */
+    .cf {
+      grid-column: 3 / span 2;
+      grid-template-rows: auto auto 1fr auto;
+      align-content: stretch;
+      /* first label sits on the cap line of "PIŠITE" (line-height .86 leaves this much above the caps) */
+      padding-top: clamp(6px, 0.9vw, 14px);
+    }
+  }
+
+  /* contact form — hairlines and mono labels, like the facts row below */
   .cf {
     display: grid;
-    gap: var(--s-6) var(--s-5);
+    gap: var(--s-5);
+    align-content: start;
   }
-  /* without JS there is nothing to submit to yet (mail endpoint comes later): the links above stay */
+  /* without JS there is nothing to submit to yet (mail endpoint comes later): the links stay */
   :global(html:not(.js)) .cf {
     display: none;
   }
@@ -162,9 +172,6 @@ const pad = (n: number) => String(n).padStart(2, "0");
     min-width: 0;
   }
   .fld__lab {
-    display: flex;
-    justify-content: space-between;
-    gap: var(--s-3);
     color: var(--dim);
     transition: color var(--d-1) var(--ease-out);
   }
@@ -173,8 +180,13 @@ const pad = (n: number) => String(n).padStart(2, "0");
   }
   .fld__ctl {
     position: relative;
-    display: block;
-    margin-top: var(--s-2); /* keeps the PD-13 focus ring off the label */
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    margin-top: 6px; /* keeps the PD-13 focus ring off the label */
+  }
+  .fld textarea {
+    flex: 1 1 auto;
   }
   .fld__ctl::after {
     content: "";
@@ -182,7 +194,7 @@ const pad = (n: number) => String(n).padStart(2, "0");
     left: 0;
     right: 0;
     bottom: 0;
-    height: 2px;
+    height: 1px;
     background: var(--fg);
     transform: scaleX(0);
     transform-origin: left;
@@ -200,19 +212,19 @@ const pad = (n: number) => String(n).padStart(2, "0");
     border: 0;
     border-bottom: 1px solid var(--line-2);
     border-radius: var(--r-0);
-    padding: 10px 0 12px;
+    padding: 6px 0 8px;
     color: var(--fg);
-    font-size: var(--t-lead);
+    font-size: var(--t-body);
     font-weight: 400;
-    line-height: 1.35;
+    line-height: 1.5;
     caret-color: var(--fg);
     transition: border-color var(--d-1) var(--ease-out);
     /* focus() after a failed submit scrolls here: keep the field and its label clear of the fixed nav */
     scroll-margin-block: 140px 40px;
   }
   .fld textarea {
-    min-height: 9.5em;
     resize: vertical;
+    min-height: calc(3lh + 14px);
   }
   .fld input:hover,
   .fld textarea:hover {
@@ -230,82 +242,41 @@ const pad = (n: number) => String(n).padStart(2, "0");
     background: var(--danger);
   }
   .fld__err {
-    min-height: 1.5em;
-    margin-top: var(--s-2);
     color: var(--danger);
-    font-size: 0.875rem;
-    line-height: 1.5;
+    font-size: 0.8125rem;
+    line-height: 1.4;
   }
-  .fld__meta {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    gap: var(--s-4);
-  }
-  .fld__meta .num {
-    flex: none;
+  .fld__err:not(:empty) {
+    margin-top: 6px;
   }
   .cf__send {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: var(--s-5);
+    gap: var(--s-3) var(--s-5);
     margin-top: var(--s-2);
   }
   .cf__btn {
-    position: relative;
-    isolation: isolate;
-    overflow: hidden;
     display: inline-flex;
     align-items: center;
-    justify-content: space-between;
-    gap: var(--s-6);
-    width: 100%;
-    min-height: 68px;
-    padding: 0 var(--s-6);
+    gap: var(--s-3);
+    min-height: 48px;
+    padding: 0 var(--s-5);
     border: 1px solid var(--fg);
     color: var(--fg);
-    font-size: clamp(1.15rem, 1.8vw, 1.6rem);
-    font-weight: 600;
-    font-stretch: 112%;
-    letter-spacing: -0.01em;
-    text-transform: uppercase;
-    transition: color var(--d-2) var(--ease-out);
+    transition:
+      background var(--d-2) var(--ease-out),
+      color var(--d-2) var(--ease-out);
   }
-  .cf__btn::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    z-index: -1;
+  .cf__btn:hover {
     background: var(--fg);
-    transform: scaleY(0);
-    transform-origin: bottom;
-    transition: transform var(--d-3) var(--ease-io);
-  }
-  .cf__btn:hover,
-  .cf__btn:focus-visible {
     color: var(--bg);
   }
-  .cf__btn:hover::before,
-  .cf__btn:focus-visible::before {
-    transform: scaleY(1);
-  }
-  .cf__arr {
-    transition: transform var(--d-3) var(--ease-out);
-  }
-  .cf__btn:hover .cf__arr,
-  .cf__btn:focus-visible .cf__arr {
-    transform: translateX(6px);
-  }
-  @media (min-width: 560px) {
-    .cf__btn {
-      width: auto;
-      min-width: 300px;
-    }
-  }
   .cf__status {
-    flex: 1 1 24ch;
+    flex: 1 1 22ch;
     color: var(--fg-2);
+    font-size: 0.9375rem;
+    line-height: 1.5;
   }
   .cf__open[hidden] {
     display: none;
@@ -319,6 +290,7 @@ const pad = (n: number) => String(n).padStart(2, "0");
     text-underline-offset: 4px;
     text-decoration-thickness: 1px;
   }
+
   .foot__g {
     display: grid;
     gap: var(--s-5);

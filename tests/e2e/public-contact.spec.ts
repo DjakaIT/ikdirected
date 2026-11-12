@@ -67,7 +67,6 @@ test("a valid form prepares the message in the mail app", async ({ page }) => {
   await form.getByRole("textbox", { name: "E-mail", exact: true }).fill("ana@primjer.hr");
   await form.getByRole("textbox", { name: "Naslov zahtjeva", exact: true }).fill("Vjenčanje u lipnju");
   await form.getByRole("textbox", { name: "Poruka", exact: true }).fill("Bok, imamo datum.");
-  await expect(form.getByText("17 / 4000")).toBeVisible();
   await form.getByRole("button", { name: "Pošalji" }).click();
 
   await expect(form.getByRole("status")).toContainText("Poruka je pripremljena u vašoj aplikaciji za e-poštu.");
