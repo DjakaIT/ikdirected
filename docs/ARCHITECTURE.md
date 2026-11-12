@@ -24,7 +24,7 @@ so nothing runs Node on the hosting.
               │  after a change (20 s quiet or "Objavi sada"): public export → GitHub branch `sadrzaj` + dispatch
               ▼
  GitHub Actions objava.yml: code from main + sadrzaj/sadrzaj.json → astro build → npm run paket → commit to branch `hosting`
-              │  hPanel "Deploy from Git" (branch hosting → public_html, auto-deploy webhook)
+              │  hPanel Git (clone of branch hosting → public_html, GitHub webhook)  
               ▼
  public_html = branch hosting. The admin's status poll sees the publish done when public_html/.ik-paket.json names
  the content commit it sent.
@@ -256,7 +256,7 @@ and client types entirely.
    `npm run paket` (`.ik-paket.json` records the content commit) → one commit of `hosting/` to branch `hosting`
    (rsync --delete: pages of deleted albums disappear). Without branch `sadrzaj`: an empty export, never demo
    content. A push to main runs `npm run gate` first and republishes with the current content.
-3. hPanel "Deploy from Git" (branch `hosting` → `public_html`, auto-deploy webhook) pulls the commit.
+3. hPanel Git (classic clone of branch `hosting` in `public_html`, GitHub push webhook) pulls the commit.
 4. The status poll marks the publish done when `public_html/.ik-paket.json` names the content commit it sent; it
    reports a failed or skipped run, and an error if the build succeeded but the hosting has not pulled it after
    15 minutes. `.ik-paket.json` and `.git/` are 404 for visitors (dot paths).

@@ -3,7 +3,7 @@
 #  - repository_dispatch "sadrzaj" (the admin on the hosting pushed the public export to branch sadrzaj): publish now
 #  - by hand: Actions -> Objava -> Run workflow
 # Publish: code from main + sadrzaj/sadrzaj.json from branch sadrzaj -> astro build -> npm run paket -> commit of
-# hosting/ to branch "hosting". hPanel (Create site -> Deploy from Git, branch hosting, auto-deploy) pulls that
+# hosting/ to branch "hosting". hPanel Git (classic clone of branch hosting, GitHub webhook) pulls that
 # branch into public_html. Admin data and photos stay on the hosting outside public_html; a build never sees them.
 #
 # Settings (Settings -> Secrets and variables -> Actions -> Variables):

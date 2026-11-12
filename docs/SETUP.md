@@ -3,7 +3,7 @@
 Ovaj dokument je za čovjeka. Claude Code ništa od ovoga ne radi sam (nema postavljanja na hosting iz agenta).
 
 **Kako radi:** GitHub Actions izgradi stranicu i gotove datoteke stavi na granu **`hosting`** repozitorija.
-hPanel (*Create site → Deploy from Git*) tu granu povlači u `public_html` i sam je ponovno povuče kad se promijeni.
+hPanel Git tu granu povlači u `public_html`, a GitHub webhook mu javi svaku promjenu pa je odmah ponovno povuče.
 Javna stranica su obične HTML datoteke, administracija (`/admin`) je PHP u `public_html/api`. Sve što se ne smije
 izgubiti — korisnici, albumi, povijest, dnevnik i **sve fotografije** — je u mapi `ikdirected-podaci` **pokraj**
 `public_html`, pa ih Git deploy nikad ne dira. Kad Ivana nešto promijeni, administracija pošalje popis albuma na
@@ -22,25 +22,34 @@ i domena na Porkbunu. GitHub Actions: javni repozitorij neograničeno, privatni 
 3. **Actions → Objava → Run workflow** (grana `main`). Kad završi zeleno, u repozitoriju postoji grana
    **`hosting`** (stranica bez albuma — albumi dolaze iz administracije).
 
-## 2. Stranica na Hostingeru (hPanel, Sarin račun)
-1. **Websites → Create site → Deploy from Git** → poveži GitHub (Hostingerova GitHub aplikacija; dopusti joj
-   pristup repozitoriju `DjakaIT/ikdirected`) → repozitorij `DjakaIT/ikdirected` → grana **`hosting`** →
-   mapa **`public_html`** → domena s Porkbuna → **Deploy**.
-2. Provjeri da je uključeno **automatsko postavljanje** (*Auto-deployment*): svaki novi commit na grani `hosting`
-   Hostinger povuče sam.
-3. **Advanced → PHP Configuration**: PHP **8.3 ili 8.4**; proširenja `mbstring`, `curl`, `json`
+## 2. Stranica na Hostingeru (hPanel, Sarin račun) — klasični Git, grana `hosting`
+Tako je postavljeno 12.11.2026. Hostinger **ne gradi ništa**: samo povlači gotovu granu `hosting` u `public_html`.
+**Ne** biraj Node.js / Astro aplikaciju (*Deploy from Git* s build postavkama): takva stranica gradi `main` bez
+`api/` i s nje se ne može prijeći na statičnu bez pražnjenja `public_html`.
+1. **Websites → Add website** → prazna stranica za domenu (bez WordPressa, bez aplikacije).
+2. **File Manager** → `domains/<domena>/public_html` mora biti **prazna** (Git klonira samo u praznu mapu;
+   staru mapu najlakše preimenuj, npr. u `public_html.stari`).
+3. Stranica → **Advanced → Git** → *Create a New Repository*: repozitorij
+   `https://github.com/DjakaIT/ikdirected.git` (javni, ključ ne treba), grana **`hosting`**, mapa prazno
+   (= `public_html`) → **Create** → **Deploy**.
+4. Kod repozitorija → **Auto Deployment** → kopiraj *Webhook URL* → GitHub → repozitorij → **Settings →
+   Webhooks → Add webhook**: *Payload URL* = taj URL, *Content type* `application/json`, *Secret* prazno,
+   *Just the push event*, *Active* → **Add webhook**. U *Recent Deliveries* mora biti zelena kvačica.
+5. **Advanced → PHP Configuration**: PHP **8.3 ili 8.4**; proširenja `mbstring`, `curl`, `json`
    (i `intl`, `fileinfo` ako ih ima). Ako nešto nedostaje, `/api/admin/auth/state` to i napiše.
-4. Na nadzornoj ploči stranice (*Plan details*) prepiši **dva nameservera** koja hPanel pokaže
-   (npr. `ns1.dns-parking.com` / `ns2.dns-parking.com`, ali uzmi točno ona koja piše).
+6. Na nadzornoj ploči stranice prepiši **IP adresu** poslužitelja (za korak 3).
 
-## 3. Domena s Porkbuna na Hostinger
-1. porkbun.com → **Account → Domain Management** → kod domene **Details**.
-2. Ako je uključen **DNSSEC**, prvo ga isključi (s uključenim DNSSEC-om domena nakon promjene ne radi).
-3. **Authoritative Nameservers → Edit** → obriši Porkbunove → upiši ona dva iz hPanela → **Submit**.
-4. Ako na domeni već koristite e-poštu preko Porkbuna: MX zapise treba upisati na Hostingeru
-   (hPanel → Domains → DNS) — inače pošta prestane stizati.
-5. Čekaj (obično sat-dva, najviše 48 h). **hPanel → Security → SSL**: besplatni certifikat se instalira sam
-   čim domena pokazuje na Hostinger; provjeri da je *Active* i za `www`.
+## 3. Domena: DNS ostaje na Porkbunu
+Nameservere **ne mijenjaj**: na Porkbunu je i prosljeđivanje e-pošte (MX `fwd1/fwd2.porkbun.com`, SPF u TXT),
+koje bi se inače tiho ugasilo.
+1. porkbun.com → **Account → Domain Management** → kod domene **DNS**.
+2. Obriši parking zapise (ALIAS/CNAME na `uixie.porkbun.com`).
+3. **Add**: *Type* **A**, *Host* prazno, *IPv4 Address* = IP iz koraka 2.6, TTL 600.
+4. **Add**: *Type* **CNAME**, *Host* `www`, *Answer* `ikdirected.com` (bez točke na kraju), TTL 600.
+5. **MX i TXT zapise ne diraj.**
+6. Čekaj (obično pola sata do sat-dva). **hPanel → Security → SSL**: certifikat mora biti *Active* i za
+   `www`. Ako je izdan prije nego je `www` zapis postojao, pokriva samo domenu bez `www` → ponovno
+   **Install** (ili Hostinger chat).
 
 ## 4. Prvi račun (tvoj, administratorski)
 1. hPanel → **File Manager** → mapa **pokraj** `public_html` (`domains/<domena>/ikdirected-podaci/`) → otvori
@@ -66,8 +75,8 @@ osobno (poruka). Vrijedi 72 sata; Ivana sama odabere lozinku i skenira QR kod. U
    *Stranica je ažurna*. Na GitHubu se vidi run *Objava …* i novi commit na grani `hosting`.
 3. Album je na `https://<domena>/radovi`, fotografije se vide. Obriši album → nakon objave stranica albuma
    vraća 404.
-4. `https://<domena>/api/admin/osvjezi` vraća JSON. `https://<domena>/.git/config` i
-   `https://<domena>/.ik-paket.json` vraćaju 404.
+4. `https://<domena>/api/admin/osvjezi` vraća JSON. `https://<domena>/.git/config` vraća 403 ili 404,
+   `https://<domena>/.ik-paket.json` vraća 404.
 5. Prije prave objave popuni `src/content/site.ts` stvarnim podacima (sve `TODO(client)`: e-pošta, telefon,
    cijene, odgovori u FAQ-u) i provjeri `RELEASE=1 npm run test -- --project unit`.
 
@@ -95,6 +104,6 @@ Tako se promjena objavi i ako je Ivana zatvorila preglednik prije kraja objave.
 | *Objava nije uspjela — GitHub token…* | novi token (korak 5.1) |
 | *…OBJAVA_UKLJUCENA* | varijabla na GitHubu (korak 1.2) |
 | *Izgradnja stranice nije uspjela* | GitHub → Actions → crveni run → koji korak je pao |
-| *Hostinger još nije preuzeo novu verziju* | hPanel → stranica → Git: automatsko postavljanje uključeno? ili *Deploy* ručno |
-| `/admin` bijela stranica s porukom o PHP-u | korak 2.3 |
-| stranica bez HTTPS-a | korak 3.5 (SSL) |
+| *Hostinger još nije preuzeo novu verziju* | GitHub → Settings → Webhooks → Recent Deliveries: zelena kvačica? ili hPanel → Git → *Deploy* ručno |
+| `/admin` bijela stranica s porukom o PHP-u | korak 2.5 |
+| stranica bez HTTPS-a | korak 3.6 (SSL) |
