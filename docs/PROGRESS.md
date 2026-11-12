@@ -81,10 +81,10 @@ Removed (H1): @astrojs/cloudflare, wrangler, @cloudflare/vitest-pool-workers.
   output with passthrough images. CI audit step is non-blocking until the Astro 7 upgrade (H7).
 
 ## Waiting on Daniel / client
-- Hosting: public_html = classic hPanel Git clone of `hosting` (2026-11-12; old site in public_html.stari), PHP API
-  answers (firstSetup). Left: GitHub webhook (auto-deploy), optional cron osvjezi, SSL for www (cert has only
-  ikdirected.com), first account; token; invite Ivana. Then rewrite SETUP.md §2–3 to that flow (Porkbun DNS kept).
-- Real domain → GitHub variable SITE_ORIGIN; email, phone, prices, FAQ answers, review → `src/content/site.ts`
+- Hosting live 2026-11-12 (SETUP §2–3 rewritten): classic hPanel Git of `hosting` + webhook verified end to end
+  (PR #3 → Objava → hosting 54fb51c → live), SSL covers www, PHP API answers firstSetup. Left for Daniel: first
+  account (SETUP §4), token (§5), invite Ivana (§6); optional cron osvjezi; old public_html.stari can be deleted.
+- Email, phone, prices, FAQ answers, review → `src/content/site.ts`
 - Category intros in site.ts drafted from reference facts only — client must approve (TODO(client))
 - Approve the sign-in copy (then move it into DESIGN §9)
 - ph-03 (Iz zraka card fallback) is not a drone photo — swap in a real aerial shot when available
@@ -92,5 +92,5 @@ Removed (H1): @astrojs/cloudflare, wrangler, @cloudflare/vitest-pool-workers.
 - Apache/LiteSpeed rules are emulated locally, not run: check SETUP §8 on the hosting once
 
 ## Next session starts at
-After the webhook exists: check one Objava reaches public_html/.ik-paket.json, then rewrite SETUP.md §2–3.
-Otherwise H7 — budgets spec (tests/e2e/budgets.spec.ts).
+H7 — budgets spec (tests/e2e/budgets.spec.ts); or the contact mail endpoint when Daniel is ready.
+After Daniel's first account + token: check an admin publish reaches the site (status "Stranica je ažurna").
