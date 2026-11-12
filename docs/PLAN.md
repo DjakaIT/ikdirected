@@ -29,7 +29,8 @@ Commit: `test(e2e): …` [done]
 **H5 CI + package** — objava.yml (gate + build + paket → branch `hosting` for hPanel Git deploy), paket-hosting.mjs;
 photos outside public_html via media/index.php (Daniel, 2026-11-11: deploy with hPanel Git). [done]
 **H6 Docs** — CLAUDE.md, ARCHITECTURE, SECURITY, TESTING, SETUP (Hostinger, hr), VODIC (hr). [done]
-**H7 Next** — budgets spec against serve.mjs (P7.3); copy audit (P7.4) incl. the new sign-in copy (not in
+**H7 Next** — **Astro 7 upgrade** (clears the remaining npm audit advisories, then make the CI audit blocking again);
+budgets spec against serve.mjs (P7.3); copy audit (P7.4) incl. the new sign-in copy (not in
 DESIGN §9 — add it there once Daniel approves); `noUncheckedIndexedAccess`/eslint (P0.3 rest); README.
 **H8 Daniel** — SETUP.md on the hosting, real domain in `SITE_ORIGIN`, `site.ts` TODO(client) facts, first publish.
 
