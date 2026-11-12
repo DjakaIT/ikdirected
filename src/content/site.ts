@@ -184,6 +184,30 @@ export const site = {
     label: "Kontakt",
     heading: ["Pišite", "mi →"],
     lead: "Javite mi datum i lokaciju, pa vam u dva dana šaljem cijenu i slobodne termine. Ako još niste sigurni oko datuma, slobodno pitajte što je otvoreno.", // TODO(client) response time
+    // Contact form copy (Daniel, 2026-11-12). Until the mail endpoint exists the form prepares the
+    // message in the visitor's mail app (mailto:), so nothing is sent from the site yet.
+    form: {
+      name: "Pošaljite upit",
+      fields: {
+        ime: "Ime",
+        prezime: "Prezime",
+        email: "E-mail",
+        naslov: "Naslov zahtjeva",
+        poruka: "Poruka",
+      },
+      errors: {
+        ime: "Upišite ime.",
+        prezime: "Upišite prezime.",
+        email: "Upišite e-mail adresu.",
+        emailFormat: "E-mail adresa nije ispravna.",
+        naslov: "Upišite naslov zahtjeva.",
+        poruka: "Napišite poruku.",
+        summary: "Provjerite označena polja.",
+      },
+      submit: "Pošalji",
+      prepared: "Poruka je pripremljena u vašoj aplikaciji za e-poštu.",
+      openMail: "Otvori e-poštu →",
+    },
   },
 
   categories: [
