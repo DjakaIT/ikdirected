@@ -81,9 +81,9 @@ Removed (H1): @astrojs/cloudflare, wrangler, @cloudflare/vitest-pool-workers.
   output with passthrough images. CI audit step is non-blocking until the Astro 7 upgrade (H7).
 
 ## Waiting on Daniel / client
-- Hosting: GitHub variables + branch hosting done; DNS + SSL done. Left: rename public_html (File Manager) →
-  classic Git clone of `hosting` → webhook for auto-deploy → cron osvjezi → first account; token; invite Ivana.
-  Then rewrite SETUP.md §2–3 to that flow (keep Porkbun DNS, not nameservers).
+- Hosting: public_html = classic hPanel Git clone of `hosting` (2026-11-12; old site in public_html.stari), PHP API
+  answers (firstSetup). Left: GitHub webhook (auto-deploy), optional cron osvjezi, SSL for www (cert has only
+  ikdirected.com), first account; token; invite Ivana. Then rewrite SETUP.md §2–3 to that flow (Porkbun DNS kept).
 - Real domain → GitHub variable SITE_ORIGIN; email, phone, prices, FAQ answers, review → `src/content/site.ts`
 - Category intros in site.ts drafted from reference facts only — client must approve (TODO(client))
 - Approve the sign-in copy (then move it into DESIGN §9)
@@ -92,5 +92,5 @@ Removed (H1): @astrojs/cloudflare, wrangler, @cloudflare/vitest-pool-workers.
 - Apache/LiteSpeed rules are emulated locally, not run: check SETUP §8 on the hosting once
 
 ## Next session starts at
-If public_html on Hostinger is empty/renamed: hosting_git_deploy-website-repository (https URL, branch hosting),
-verify /api/admin/auth/state JSON, then SETUP.md rewrite. Otherwise H7 — budgets spec (tests/e2e/budgets.spec.ts).
+After the webhook exists: check one Objava reaches public_html/.ik-paket.json, then rewrite SETUP.md §2–3.
+Otherwise H7 — budgets spec (tests/e2e/budgets.spec.ts).
