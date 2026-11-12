@@ -1,0 +1,1 @@
+function o(i){i.classList.add("is-loaded")}function n(i){for(const t of i.querySelectorAll(".pic:not(.is-loaded)")){const e=t.querySelector(".pic__img");if(e){if(e.complete&&e.naturalWidth>0){o(t);continue}e.addEventListener("load",()=>{e.decode().catch(()=>{}).then(()=>o(t))},{once:!0}),e.addEventListener("error",()=>o(t),{once:!0})}}}export{n as i};

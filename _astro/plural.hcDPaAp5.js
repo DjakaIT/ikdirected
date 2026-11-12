@@ -1,0 +1,1 @@
+function c(o,n,f,s){const r=Math.abs(Math.trunc(o)),t=r%10,a=r%100;return t===1&&a!==11?n:t>=2&&t<=4&&(a<12||a>14)?f:s}const u=o=>`${o} ${c(o,"fotografija","fotografije","fotografija")}`;export{u as c,c as p};
