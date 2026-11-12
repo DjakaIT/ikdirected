@@ -1,0 +1,37 @@
+---
+// SECURITY §9: placeholder route. The notice itself is the client's to write — TODO(client).
+import Public from "../layouts/Public.astro";
+import { site } from "../content/site";
+const [first, ...rest] = site.privacy.body;
+---
+
+<Public title={`${site.privacy.title} | ${site.brand}`} description={site.privacy.description} path="/privatnost">
+  <section class="pv" aria-labelledby="pv-title">
+    <h1 id="pv-title">{site.privacy.title}</h1>
+    <p>{first}</p>
+    {rest.map((p) => <p>{p}</p>)}
+  </section>
+</Public>
+
+<style>
+  .pv {
+    min-height: 70svh;
+    padding: clamp(120px, 18vh, 200px) var(--pad) var(--s-9);
+    max-width: calc(62ch + 2 * var(--pad));
+  }
+  h1 {
+    font-size: var(--t-h2);
+    font-weight: 500;
+    font-stretch: 108%;
+    letter-spacing: -0.035em;
+    text-transform: uppercase;
+    margin-bottom: var(--s-6);
+  }
+  p {
+    font-size: var(--t-lead);
+  }
+  p + p {
+    margin-top: var(--s-4);
+    color: var(--dim);
+  }
+</style>

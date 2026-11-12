@@ -1,0 +1,16 @@
+---
+// /radovi/stranica/N for N ≥ 2 (AC-ARC-03). Only existing pages are generated.
+import type { GetStaticPaths } from "astro";
+import ArchivePage from "../../../components/archive/ArchivePage.astro";
+import { listAlbums } from "../../../lib/data/public";
+
+export const getStaticPaths = (async () => {
+  const first = await listAlbums({ page: 1 });
+  const pages = first?.totalPages ?? 1;
+  return Array.from({ length: Math.max(0, pages - 1) }, (_, i) => ({ params: { n: String(i + 2) }, props: { page: i + 2 } }));
+}) satisfies GetStaticPaths;
+
+const { page } = Astro.props;
+---
+
+<ArchivePage page={page} />

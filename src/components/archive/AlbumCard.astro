@@ -1,0 +1,82 @@
+---
+// Archive card (DESIGN §5.2, AC-ARC-05): 4:5 cover, title, place · MM/YYYY · count. On a fine
+// pointer hover (and on keyboard focus) the cover cross-fades to the album's second photo.
+import Picture from "../Picture.astro";
+import { monthYearNumeric } from "../../lib/text/dates";
+import type { AlbumCardData } from "../../lib/data/types";
+
+interface Props {
+  album: AlbumCardData;
+  eager?: boolean;
+}
+
+const { album, eager = false } = Astro.props;
+const tid = `t-${album.id}`;
+const mid = `m-${album.id}`;
+const sizes = "(max-width: 639px) 100vw, (max-width: 1099px) 50vw, 33vw";
+const meta = [album.place, monthYearNumeric(album.eventDate), String(album.photoCount)].filter(Boolean).join(" · ");
+---
+
+<li class="card" data-card data-search={`${album.title} ${album.place}`}>
+  <a class="card__a" href={`/radovi/${album.slug}`} aria-labelledby={`${tid} ${mid}`}>
+    <div class="card__img" data-card-cover>
+      <Picture photo={album.cover} sizes={sizes} fit="cover" loading={eager ? "eager" : "lazy"} />
+      {
+        album.second && (
+          <Picture photo={album.second} sizes={sizes} fit="cover" decorative class="card__alt" />
+        )
+      }
+    </div>
+    <h3 class="card__t" id={tid}>{album.title}</h3>
+    <p class="card__m m num" id={mid}>{meta}</p>
+  </a>
+</li>
+
+<style>
+  .card {
+    list-style: none;
+  }
+  .card__a {
+    display: block;
+    outline-offset: 6px;
+  }
+  .card__img {
+    position: relative;
+    aspect-ratio: 4 / 5;
+    overflow: hidden;
+    background: var(--bg-2);
+  }
+  .card__img :global(.pic__img) {
+    filter: brightness(0.92);
+  }
+  .card__img :global(.card__alt) {
+    opacity: 0;
+    transition: opacity var(--d-3) var(--ease-out);
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .card__a:hover .card__img :global(.card__alt) {
+      opacity: 1;
+    }
+  }
+  .card__a:focus-visible .card__img :global(.card__alt) {
+    opacity: 1;
+  }
+  .card__t {
+    margin-top: var(--s-4);
+    font-size: calc(var(--t-h3) * 0.6);
+    font-weight: 600;
+    font-stretch: 110%;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+    text-transform: uppercase;
+  }
+  .card__m {
+    margin-top: var(--s-2);
+    color: var(--dim);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .card__img :global(.card__alt) {
+      transition: none;
+    }
+  }
+</style>

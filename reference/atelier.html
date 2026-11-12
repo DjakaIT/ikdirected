@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="hr">
+<!--
+  IKDIRECTED — DIZAJN A "ATELIER"
+  ===========================================================================
+  PRIJE OBJAVE ZAMIJENITI (traži ovo u fileu):
+    ikdirected.com          → pravu domenu
+    hello@ikdirected.com    → pravi e-mail
+    +385 91 000 0000        → pravi telefon
+    "IME PREZIME"           → pravo ime u JSON-LD (Person)
+    cijene i rokovi         → prave (i u tekstu i u JSON-LD, moraju se slagati)
+    images.unsplash.com/... → njezine fotografije
+  Nakon toga: dodati robots.txt i sitemap.xml, i povezati Google Business Profile
+  (isti naziv, adresa i telefon kao u JSON-LD ispod).
+  ===========================================================================
+-->
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+
+<!-- ── SEO ─────────────────────────────────────────────────────────────── -->
+<title>Fotografkinja vjenčanja i evenata u Zadru | ikdirected</title>
+<meta name="description" content="Fotografiram vjenčanja, evente i portrete u Zadru i po cijeloj Hrvatskoj, uz dron kadrove iz zraka. Cijeli dan od 1.200 €, prve fotografije u tjedan dana.">
+<link rel="canonical" href="https://ikdirected.com/">
+<meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1">
+<meta name="author" content="ikdirected">
+<meta name="theme-color" content="#0A0A0A">
+
+<!-- ── Lokalno (GEO) ───────────────────────────────────────────────────── -->
+<meta name="geo.region" content="HR-13">
+<meta name="geo.placename" content="Zadar">
+<meta name="geo.position" content="44.119371;15.231365">
+<meta name="ICBM" content="44.119371, 15.231365">
+
+<!-- ── Dijeljenje ──────────────────────────────────────────────────────── -->
+<meta property="og:type" content="website">
+<meta property="og:locale" content="hr_HR">
+<meta property="og:site_name" content="ikdirected">
+<meta property="og:title" content="Fotografkinja vjenčanja i evenata u Zadru | ikdirected">
+<meta property="og:description" content="Vjenčanja, eventi, portreti i kadrovi iz zraka. Zadar i cijela Hrvatska.">
+<meta property="og:url" content="https://ikdirected.com/">
+<meta property="og:image" content="https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=1200&h=630&q=80">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Mladenci na obali u zlatnom satu">
+<meta name="twitter:card" content="summary_large_image">
+
+<!-- Kad bude i engleska verzija, otkomentirati:
+<link rel="alternate" hreflang="hr" href="https://ikdirected.com/">
+<link rel="alternate" hreflang="en" href="https://ikdirected.com/en/">
+<link rel="alternate" hreflang="x-default" href="https://ikdirected.com/">
+-->
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://images.unsplash.com">
+<link rel="preload" as="image" fetchpriority="high" href="https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=2000&q=80">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..125,300..800&family=Space+Mono&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0A0A0A;--bg-2:#131313;--fg:#F2F0ED;
+  --dim:rgba(242,240,237,.52);--line:rgba(242,240,237,.14);
+  --sans:'Archivo',system-ui,sans-serif;--mono:'Space Mono',ui-monospace,monospace;
+  --pad:clamp(18px,3.4vw,54px);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;scroll-behavior:smooth}
+body{background:var(--bg);color:var(--fg);font-family:var(--sans);font-weight:300;
+  font-size:clamp(14px,.95vw,16px);line-height:1.68;overflow-x:hidden}
+html.js body,html.js .shot{cursor:none}
+img{display:block;width:100%;height:100%;object-fit:cover}
+a{color:inherit;text-decoration:none}
+button{font:inherit;color:inherit;background:none;border:0}
+:focus-visible{outline:1px solid var(--fg);outline-offset:5px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.skip{position:absolute;left:var(--pad);top:-60px;z-index:99;background:var(--fg);color:#000;padding:10px 16px;transition:top .2s}
+.skip:focus{top:14px}
+.m{font-family:var(--mono);font-size:.62rem;letter-spacing:.14em;text-transform:uppercase}
+.dim{color:var(--dim)}
+
+.grain{position:fixed;inset:0;z-index:70;pointer-events:none;opacity:.055;mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='260'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.82' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+
+.cur{position:fixed;top:0;left:0;z-index:90;width:12px;height:12px;border-radius:50%;background:var(--fg);
+  pointer-events:none;transform:translate(-50%,-50%);display:grid;place-items:center;mix-blend-mode:difference;
+  transition:width .35s cubic-bezier(.2,.8,.2,1),height .35s cubic-bezier(.2,.8,.2,1)}
+.cur span{font-family:var(--mono);font-size:.55rem;letter-spacing:.12em;color:#000;opacity:0;transition:opacity .25s}
+.cur.big{width:82px;height:82px}.cur.big span{opacity:1}
+html:not(.js) .cur{display:none}
+
+.load{position:fixed;inset:0;z-index:100;background:var(--bg);display:grid;place-items:center;
+  transition:opacity .7s ease .25s,visibility .7s .25s}
+.load.off{opacity:0;visibility:hidden}
+.load b{font-weight:400;letter-spacing:.5em;text-transform:uppercase;font-size:.8rem;padding-left:.5em}
+.load i{position:absolute;right:var(--pad);bottom:var(--pad);font-family:var(--mono);font-size:.7rem;font-style:normal}
+.load u{position:absolute;left:0;bottom:0;height:1px;background:var(--fg);width:0;text-decoration:none}
+
+.nav{position:fixed;inset:0 0 auto 0;z-index:60;display:flex;justify-content:space-between;
+  align-items:center;padding:20px var(--pad);mix-blend-mode:difference}
+.nav a{letter-spacing:.34em;text-transform:uppercase;font-size:.72rem;font-weight:400}
+.nav .m{opacity:.75}.nav .m:hover{opacity:1}
+
+/* hero */
+.hero{position:relative;height:100svh;min-height:540px;overflow:hidden}
+.hero__img{position:absolute;inset:0;clip-path:inset(100% 0 0 0)}
+.hero__img img{transform:scale(1.18);filter:brightness(.7)}
+.hero.go .hero__img{clip-path:inset(0 0 0 0);transition:clip-path 1.5s cubic-bezier(.76,0,.24,1) .1s}
+.hero.go .hero__img img{transform:scale(1);transition:transform 2.6s cubic-bezier(.2,.8,.2,1) .1s}
+.hero__in{position:relative;z-index:3;height:100%;display:flex;flex-direction:column;justify-content:flex-end;padding:var(--pad)}
+.hero h1{font-size:clamp(3rem,12.6vw,13rem);line-height:.84;font-weight:600;font-stretch:112%;
+  letter-spacing:-.045em;text-transform:uppercase}
+.hero h1 .wm{display:block;overflow:hidden}
+.hero h1 .wm i{display:block;font-style:normal;transform:translateY(105%);transition:transform 1.15s cubic-bezier(.76,0,.24,1) .5s}
+.hero.go h1 .wm i{transform:none}
+.hero h1 .sub{display:block;font-size:clamp(.82rem,1.5vw,1.15rem);font-weight:300;font-stretch:100%;
+  letter-spacing:.02em;line-height:1.5;text-transform:none;max-width:34ch;margin-top:18px}
+.hero__row{display:flex;justify-content:space-between;align-items:flex-end;gap:20px;
+  border-top:1px solid var(--line);margin-top:24px;padding-top:16px;flex-wrap:wrap;
+  opacity:0;transform:translateY(14px);transition:opacity 1s ease 1.1s,transform 1s ease 1.1s}
+.hero.go .hero__row{opacity:1;transform:none}
+
+/* izjava */
+.say{padding:clamp(110px,20vh,220px) var(--pad);max-width:1180px;margin-inline:auto}
+.say p{font-size:clamp(1.4rem,3.9vw,3.2rem);line-height:1.16;font-weight:300;letter-spacing:-.025em}
+.say w{display:inline-block;opacity:.16;transition:opacity .5s ease}
+.say w.on{opacity:1}
+.say .m{display:block;margin-bottom:clamp(28px,5vw,56px)}
+
+/* horizontalna galerija */
+.hg{position:relative}
+.hg__sticky{position:sticky;top:0;height:100svh;overflow:hidden;display:flex;align-items:center}
+.hg__track{display:flex;align-items:center;gap:clamp(14px,2.2vw,40px);padding-inline:var(--pad);will-change:transform}
+.hg__intro{flex:none;width:clamp(200px,20vw,300px);padding-right:2vw}
+.hg__intro h2{font-size:clamp(1.6rem,2.6vw,2.4rem);font-weight:500;letter-spacing:-.03em;line-height:1;
+  margin:12px 0 14px;text-transform:uppercase;font-stretch:108%}
+.shot{flex:none;position:relative}
+.shot__f{overflow:hidden;background:var(--bg-2)}
+.shot img{transition:transform 1.2s cubic-bezier(.2,.8,.2,1),filter .6s;filter:brightness(.86)}
+.shot:hover img{transform:scale(1.045);filter:brightness(1)}
+.shot figcaption{display:flex;justify-content:space-between;gap:10px;margin-top:11px}
+.hg__end{flex:none;width:36vw;display:flex;align-items:center;padding-left:2vw}
+.hg__end p{font-size:clamp(1.15rem,2.1vw,1.9rem);line-height:1.2;letter-spacing:-.02em}
+.hg__end a{border-bottom:1px solid var(--line)}
+.hg__bar{position:absolute;left:var(--pad);right:var(--pad);bottom:26px;height:1px;background:var(--line);z-index:4}
+.hg__bar i{display:block;height:1px;background:var(--fg);width:0}
+@media(max-width:900px){
+  .hg__sticky{position:static;height:auto;display:block}
+  .hg__track{overflow-x:auto;scroll-snap-type:x mandatory;padding-block:20px}
+  .hg__track::-webkit-scrollbar{display:none}
+  .shot{scroll-snap-align:center}
+  .hg__bar{display:none}
+  .hg__intro{width:70vw}.hg__end{width:80vw}
+}
+
+/* usluge */
+.stack{padding:clamp(80px,12vw,150px) var(--pad) clamp(40px,8vw,90px)}
+.stack__h{display:flex;justify-content:space-between;align-items:baseline;gap:16px;flex-wrap:wrap;margin-bottom:clamp(24px,4vw,48px)}
+.stack__h h2{font-size:clamp(1.8rem,4.4vw,3.4rem);font-weight:500;letter-spacing:-.035em;text-transform:uppercase;font-stretch:108%}
+.card{position:sticky;background:var(--bg-2);border:1px solid var(--line);display:grid;
+  grid-template-columns:1fr;overflow:hidden;margin-bottom:16px}
+@media(min-width:820px){.card{grid-template-columns:1.15fr .85fr;min-height:340px}}
+.card__t{padding:clamp(24px,3vw,44px);display:flex;flex-direction:column;justify-content:space-between;gap:28px}
+.card__t h3{font-size:clamp(1.55rem,3.1vw,2.5rem);font-weight:400;letter-spacing:-.03em;text-transform:uppercase;font-stretch:106%}
+.card__t p{max-width:42ch;color:var(--dim);margin-top:12px}
+.card__i{min-height:220px;overflow:hidden}
+.card__i img{filter:brightness(.9)}
+.card:nth-of-type(2){top:88px}.card:nth-of-type(3){top:104px}
+.card:nth-of-type(4){top:120px}.card:nth-of-type(5){top:136px}
+
+/* područje rada */
+.area{padding:clamp(60px,9vw,120px) var(--pad) 0;display:grid;gap:clamp(20px,3vw,50px)}
+@media(min-width:820px){.area{grid-template-columns:.55fr 1fr;align-items:start}}
+.area h2{font-size:clamp(1.6rem,3.4vw,2.6rem);font-weight:500;letter-spacing:-.03em;text-transform:uppercase;font-stretch:106%}
+.area p{max-width:62ch;font-size:clamp(1rem,1.4vw,1.2rem)}
+.area p+p{margin-top:14px;color:var(--dim)}
+
+.mq{border-block:1px solid var(--line);padding:16px 0;overflow:hidden;margin-top:clamp(50px,8vw,110px)}
+.mq div{display:flex;gap:36px;width:max-content;animation:mq 38s linear infinite}
+.mq span{font-size:clamp(1.4rem,3.2vw,2.6rem);font-weight:400;text-transform:uppercase;
+  letter-spacing:-.02em;white-space:nowrap;font-stretch:110%}
+.mq b{font-weight:300;opacity:.32}
+@keyframes mq{to{transform:translateX(-50%)}}
+
+/* pitanja */
+.faq{padding:clamp(80px,12vw,160px) var(--pad)}
+.faq>h2{font-size:clamp(1.8rem,4.4vw,3.4rem);font-weight:500;letter-spacing:-.035em;
+  text-transform:uppercase;font-stretch:108%;margin:12px 0 clamp(30px,5vw,60px)}
+.qa{display:grid;grid-template-columns:1fr;gap:6px;border-top:1px solid var(--line);padding:clamp(22px,2.6vw,32px) 0}
+@media(min-width:860px){.qa{grid-template-columns:.85fr 1.15fr;gap:40px;align-items:start}}
+.qa:last-of-type{border-bottom:1px solid var(--line)}
+.qa h3{font-size:clamp(1.1rem,1.8vw,1.45rem);font-weight:400;letter-spacing:-.02em}
+.qa p{color:var(--dim);max-width:56ch}
+
+/* kontakt */
+.foot{padding:clamp(70px,12vw,160px) var(--pad) 30px}
+.foot h2{font-size:clamp(2.6rem,12vw,11rem);line-height:.86;font-weight:600;letter-spacing:-.05em;
+  text-transform:uppercase;font-stretch:112%}
+.foot h2 a{display:inline-block;transition:opacity .3s}.foot h2 a:hover{opacity:.55}
+.foot__lead{max-width:42ch;margin-top:26px;font-size:clamp(1rem,1.5vw,1.25rem)}
+.foot__g{display:grid;gap:24px;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+  border-top:1px solid var(--line);margin-top:clamp(40px,6vw,80px);padding-top:26px}
+.foot__g .m{display:block;margin-bottom:8px;color:var(--dim)}
+.foot__end{display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-top:clamp(40px,7vw,90px);color:var(--dim)}
+
+/* lightbox */
+.lb{position:fixed;inset:0;z-index:95;background:rgba(8,8,8,.96);display:grid;
+  grid-template-rows:auto 1fr auto;padding:16px var(--pad) 20px;opacity:0;visibility:hidden;
+  transition:opacity .4s ease,visibility .4s}
+.lb.on{opacity:1;visibility:visible}
+.lb__top,.lb__bot{display:flex;justify-content:space-between;align-items:center;gap:20px}
+.lb__stage{display:grid;place-items:center;min-height:0;padding:14px 0}
+.lb__stage img{width:auto;height:100%;max-width:100%;object-fit:contain}
+.lb__nav{display:flex;gap:8px}
+.lb__nav button{border:1px solid var(--line);width:46px;height:46px;border-radius:50%;transition:background .3s,color .3s,border-color .3s}
+.lb__nav button:hover{background:var(--fg);color:#000;border-color:var(--fg)}
+
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition-duration:.01ms!important}
+  .say w{opacity:1}}
+</style>
+</head>
+<body>
+<a class="skip m" href="#rad">Prijeđi na sadržaj</a>
+<div class="grain"></div>
+<div class="cur" id="cur" aria-hidden="true"><span>Otvori</span></div>
+<div class="load" id="load" aria-hidden="true"><b>ikdirected</b><i id="pct">00</i><u id="bar"></u></div>
+
+<nav class="nav">
+  <a href="#">ikdirected</a>
+  <a href="#kontakt" class="m">Provjerite termin</a>
+</nav>
+
+<header class="hero" id="hero">
+  <div class="hero__img">
+    <img src="https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=2000&q=80"
+         alt="Mladenci na obali u zlatnom satu, vjenčanje u Ninu" fetchpriority="high" width="2000" height="1333">
+  </div>
+  <div class="hero__in">
+    <h1>
+      <span class="wm"><i>ikdirected</i></span>
+      <span class="sub">Fotografkinja vjenčanja, evenata i portreta. Zadar i cijela Hrvatska, od ove godine i iz zraka.</span>
+    </h1>
+    <div class="hero__row">
+      <span class="m dim">Termini za 2026. su otvoreni</span>
+      <span class="m dim">Odgovaram u dva dana</span>
+      <span class="m dim">Pogledajte radove ↓</span>
+    </div>
+  </div>
+</header>
+
+<main>
+<section class="say">
+  <span class="m dim">Kako radim</span>
+  <p id="sayTxt">Volim kad me se ne primijeti. Dođem ranije, prošetam prostor i vidim gdje pada svjetlo, pa vas pustim na miru. Najbolje fotografije ionako nastanu kad ljudi zaborave da sam tu.</p>
+</section>
+
+<section class="hg" id="rad" aria-label="Galerija fotografija">
+  <div class="hg__sticky">
+    <div class="hg__track" id="track">
+      <div class="hg__intro">
+        <span class="m dim">Odabrani radovi</span>
+        <h2>Galerija</h2>
+        <p class="dim">Dvanaest fotografija iz 2024. – 2026. Kliknite za veliki prikaz.</p>
+      </div>
+
+      <figure class="shot" style="width:min(26vw,78vw);transform:translateY(-4vh)" data-full="https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=1800&q=75" data-t="Ana i Marko" data-p="Nin · 2025.">
+        <div class="shot__f" style="aspect-ratio:3/4"><img loading="lazy" decoding="async" src="https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=1000&q=75" alt="Mladenci se drže za ruke na obali u Ninu"></div>
+        <figcaption><span class="m">Ana i Marko</span><span class="m dim">Nin · 2025.</span></figcaption>
+      </figure>
+
+      <figure class="shot" style="width:min(33vw,86vw);transform:translateY(6vh)" data-full="https://images.unsplash.com/photo-1520854221256-17451cc331bf?auto=format&fit=crop&w=1800&q=75" data-t="Detalj" data-p="Zadar · 2025.">
+        <div class="shot__f" style="aspect-ratio:3/2"><img loading="lazy" decoding="async" src="https://images.unsplash.com/photo-1520854221256-17451cc331bf?auto=format&fit=crop&w=1200&q=75" alt="Detalj ruku mladenaca s prstenjem"></div>
+        <figcaption><span class="m">Detalj</span><span class="m dim">Zadar · 2025.</span></figcaption>
+      </figure>
+
+      <figure class="shot" style="width:min(21vw,72vw);transform:translateY(-8vh)" data-full="https://images.unsplash.com/photo-1606216794079-73f85bbd57d5?auto=format&fit=crop&w=1800&q=75" data-t="Portret mladenke" data-p="Studio · 2026.">
+        <div class="shot__f" style="aspect-ratio:4/5"><img loading="lazy" decoding="async" src="https://images.unsplash.com/photo-1606216794079-73f85bbd57d5?auto=format&fit=crop&w=1000&q=75" alt="Portret mladenke u vjenčanici uz prirodno svjetlo"></div>
+        <figcaption><span class="m">Portret</span><span class="m dim">Studio · 2026.</span></figcaption>
+      </figure>
+
+      <figure class="shot" style="width:min(40vw,88vw);transform:translateY(4vh)" data-full="https://images.unsplash.com/photo-1505896202-4fe971e982fa?auto=format&fit=crop&w=1800&q=75" data-t="Iz zraka" data-p="Kornati · 2026.">
+        <div class="shot__f" style="aspect-ratio:16/10"><img loading="lazy" decoding="async" src="https://images.unsplash.com/photo-1505896202-4fe971e982fa?auto=format&fit=crop&w=1400&q=75" alt="Zračni kadar uvale snimljen dronom na Kornatima"></div>
+        <figcaption><span class="m">Iz zraka</span><span class="m dim">Kornati · 2026.</span></figcaption>
+      </figure>
+
+      <figure class="shot" style="width:min(29vw,84vw);transform:translateY(-6vh)" data-full="https://images.unsplash.com/photo-1460978812857-470ed1c77af0?auto=format&fit=crop&w=1800&q=75" data-t="Obred" data-p="Šibenik · 2025.">
+        <div class="shot__f" style="aspect-ratio:3/2"><img loading="lazy" decoding="async" src="https://images.unsplash.com/photo-1460978812857-470ed1c77af0?auto=format&fit=crop&w=1200&q=75" alt="Mladenci nakon obreda, crno-bijela fotografija iz Šibenika"></div>
+        <figcaption><span class="m">Obred</span><span class="m dim">Šibenik · 2025.</span></figcaption>
+      </figure>
+
+      <figure class="shot" style="width:min(27vw,84vw);transform:translateY(8vh)" data-full="https://images.unsplash.com/photo-1604017011826-d3b4c23f8914?auto=format&fit=crop&w=1800&q=75" data-t="Zlatni sat" data-p="Vir · 2024.">
+        <div class="shot__f" style="aspect-ratio:3/2"><img loading="lazy" decoding="async" src="https://images.unsplash.com/photo-1604017011826-d3b4c23f8914?auto=format&fit=crop&w=1200&q=75" alt="Par u polju u zlatnom satu na Viru"></div>
+        <figcaption><span class="m">Zlatni sat</span><span class="m dim">Vir · 2024.</span></figcaption>
+      </figure>
+
+      <figure class="shot" style="width:min(23vw,74vw);transform:translateY(-3vh)" data-full="https://images.unsplash.com/photo-1573676048035-9c2a72b6a12a?auto=format&fit=crop&w=1800&q=75" data-t="Prvi ples" data-p="Zadar · 2025.">
+        <div class="shot__f" style="aspect-ratio:4/5"><img loading="lazy" decoding="async" src="https://images.unsplash.com/photo-1573676048035-9c2a72b6a12a?auto=format&fit=crop&w=1000&q=75" alt="Prvi ples mladenaca, crno-bijela fotografija iz Zadra"></div>
+        <figcaption><span class="m">Prvi ples</span><span class="m dim">Zadar · 2025.</span></figcaption>
+      </figure>
+
+      <figure class="shot" style="width:min(38vw,88vw);transform:translateY(5vh)" data-full="https://images.unsplash.com/photo-1505142468610-359e7d316be0?auto=format&fit=crop&w=1800&q=75" data-t="Obala" data-p="Pag · 2026.">
+        <div class="shot__f" style="aspect-ratio:16/9"><img loading="lazy" decoding="async" src="https://images.unsplash.com/photo-1505142468610-359e7d316be0?auto=format&fit=crop&w=1400&q=75" alt="Obala snimljena dronom iznad Paga"></div>
+        <figcaption><span class="m">Obala</span><span class="m dim">Pag · 2026.</span></figcaption>
+      </figure>
+
+      <figure class="shot" style="width:min(24vw,74vw);transform:translateY(-7vh)" data-full="https://images.unsplash.com/photo-1628701293049-bb4c87a2bdb5?auto=format&fit=crop&w=1800&q=75" data-t="Pripreme" data-p="Nin · 2025.">
+        <div class="shot__f" style="aspect-ratio:3/4"><img loading="lazy" decoding="async" src="https://images.unsplash.com/photo-1628701293049-bb4c87a2bdb5?auto=format&fit=crop&w=1000&q=75" alt="Vjenčanica i cvijeće tijekom priprema mladenke"></div>
+        <figcaption><span class="m">Pripreme</span><span class="m dim">Nin · 2025.</span></figcaption>
+      </figure>
+
+      <figure class="shot" style="width:min(31vw,86vw);transform:translateY(3vh)" data-full="https://images.unsplash.com/photo-1563808599481-34a342e44508?auto=format&fit=crop&w=1800&q=75" data-t="Riva" data-p="Zadar · 2024.">
+        <div class="shot__f" style="aspect-ratio:3/2"><img loading="lazy" decoding="async" src="https://images.unsplash.com/photo-1563808599481-34a342e44508?auto=format&fit=crop&w=1200&q=75" alt="Mladenci na drvenom molu uz more"></div>
+        <figcaption><span class="m">Riva</span><span class="m dim">Zadar · 2024.</span></figcaption>
+      </figure>
+
+      <figure class="shot" style="width:min(22vw,72vw);transform:translateY(-5vh)" data-full="https://images.unsplash.com/photo-1630526720753-aa4e71acf67d?auto=format&fit=crop&w=1800&q=75" data-t="Portret" data-p="Velebit · 2025.">
+        <div class="shot__f" style="aspect-ratio:4/5"><img loading="lazy" decoding="async" src="https://images.unsplash.com/photo-1630526720753-aa4e71acf67d?auto=format&fit=crop&w=1000&q=75" alt="Portret u haljini na snijegu pod Velebitom"></div>
+        <figcaption><span class="m">Portret</span><span class="m dim">Velebit · 2025.</span></figcaption>
+      </figure>
+
+      <figure class="shot" style="width:min(36vw,88vw);transform:translateY(6vh)" data-full="https://images.unsplash.com/photo-1654169693942-9dec89af9afe?auto=format&fit=crop&w=1800&q=75" data-t="Uvala" data-p="Kornati · 2026.">
+        <div class="shot__f" style="aspect-ratio:16/10"><img loading="lazy" decoding="async" src="https://images.unsplash.com/photo-1654169693942-9dec89af9afe?auto=format&fit=crop&w=1400&q=75" alt="Uvala s hridima snimljena iz zraka"></div>
+        <figcaption><span class="m">Uvala</span><span class="m dim">Kornati · 2026.</span></figcaption>
+      </figure>
+
+      <div class="hg__end"><p>Ovdje bi mogao biti vaš dan.<br><a href="#kontakt">Provjerite termin →</a></p></div>
+    </div>
+    <div class="hg__bar" aria-hidden="true"><i id="prog"></i></div>
+  </div>
+</section>
+
+<section class="stack" id="usluge">
+  <div class="stack__h">
+    <h2>Usluge i cijene</h2>
+    <span class="m dim">Bez paketa koje nitko ne razumije</span>
+  </div>
+
+  <article class="card">
+    <div class="card__t">
+      <div><h3>Vjenčanja</h3><p>Cijeli dan, od priprema do zadnjeg plesa. Prvih četrdesetak fotografija dobivate u tjedan dana, cijelu galeriju unutar mjesec dana. Ako imate manju proslavu, postoji i kraći paket do pet sati.</p></div>
+      <span class="m dim">Od 1.200 € · kraći paket 700 €</span>
+    </div>
+    <div class="card__i"><img loading="lazy" decoding="async" src="https://images.unsplash.com/photo-1583939003579-730e3918a45a?auto=format&fit=crop&w=1200&q=75" alt="Mladoženja ljubi mladenku nakon obreda"></div>
+  </article>
+
+  <article class="card">
+    <div class="card__t">
+      <div><h3>Eventi</h3><p>Konferencije, otvorenja i koncerti. Trideset fotografija za objave šaljem isti dan, ostatak u roku od 72 sata. Radim i s vašim marketing timom ako trebate određene kadrove.</p></div>
+      <span class="m dim">Od 150 € po satu</span>
+    </div>
+    <div class="card__i"><img loading="lazy" decoding="async" src="https://images.unsplash.com/photo-1546032996-6dfacbacbf3f?auto=format&fit=crop&w=1200&q=75" alt="Nasmijani par na proslavi na otvorenom"></div>
+  </article>
+
+  <article class="card">
+    <div class="card__t">
+      <div><h3>Portreti</h3><p>Za web, društvene mreže i medije. Kadrove dogovorimo prije snimanja pa termin traje sat do sat i pol, u studiju ili vani.</p></div>
+      <span class="m dim">Od 250 €</span>
+    </div>
+    <div class="card__i"><img loading="lazy" decoding="async" src="https://images.unsplash.com/photo-1606216794079-73f85bbd57d5?auto=format&fit=crop&w=1200&q=75" alt="Portret žene uz prirodno svjetlo"></div>
+  </article>
+
+  <article class="card">
+    <div class="card__t">
+      <div><h3>Iz zraka</h3><p>Dron kadrovi lokacije, objekta ili proslave. Idu uz vjenčanja i evente na otvorenom, ako lokacija dopušta letenje, a mogu se naručiti i zasebno.</p></div>
+      <span class="m dim">Od 200 € · novo od 2026.</span>
+    </div>
+    <div class="card__i"><img loading="lazy" decoding="async" src="https://images.unsplash.com/photo-1505896202-4fe971e982fa?auto=format&fit=crop&w=1200&q=75" alt="Plaža i more snimljeni dronom"></div>
+  </article>
+</section>
+
+<section class="area" id="podrucje">
+  <h2>Gdje radim</h2>
+  <div>
+    <p>Baza mi je Zadar, pa u Zadarskoj županiji nema putnih troškova — Nin, Pag, Vir, Biograd, Sukošan, Petrčane, Kornati.</p>
+    <p>Redovito snimam i u Šibeniku, Splitu, Rijeci, Zagrebu i Istri. Za vjenčanja izvan Hrvatske šaljem posebnu ponudu s putnim troškovima i noćenjem.</p>
+  </div>
+</section>
+
+<div class="mq" aria-hidden="true"><div id="mqt"></div></div>
+
+<section class="faq" id="pitanja">
+  <span class="m dim">Česta pitanja</span>
+  <h2>Ono što me najčešće pitaju</h2>
+
+  <div class="qa"><h3>Koliko košta fotografiranje vjenčanja?</h3>
+    <p>Cijeli dan kreće od 1.200 €. U to ulaze pripreme, obred, proslava i zadnji ples, obrađene fotografije u online galeriji i pravo na ispis. Kraći paket do pet sati je 700 €.</p></div>
+
+  <div class="qa"><h3>Kada dobivam fotografije?</h3>
+    <p>Prvih četrdesetak fotografija šaljem u roku od tjedan dana, a cijelu galeriju unutar mjesec dana od vjenčanja. Za evente je prvi izbor gotov isti dan.</p></div>
+
+  <div class="qa"><h3>Dolazite li izvan Zadra?</h3>
+    <p>Da. U Zadarskoj županiji nema doplate, za ostatak Hrvatske dogovaramo putne troškove, a za vjenčanja u inozemstvu šaljem posebnu ponudu.</p></div>
+
+  <div class="qa"><h3>Snimate li i dronom?</h3>
+    <p>Da, od 2026. Zračni kadrovi idu uz vjenčanja i evente na otvorenom kad lokacija dopušta letenje. Ako je riječ o zoni u kojoj treba dozvola, javim se ranije da to riješimo na vrijeme.</p></div>
+
+  <div class="qa"><h3>Koliko ranije treba rezervirati termin?</h3>
+    <p>Ljetne subote se obično zatvore osam do dvanaest mjeseci unaprijed. Za termine izvan sezone dovoljno je i nekoliko mjeseci.</p></div>
+
+  <div class="qa"><h3>Mogu li dobiti i neobrađene fotografije?</h3>
+    <p>Ne šaljem neobrađene datoteke jer obrada je dio stila po kojem me birate. Ako trebate nešto brzo za objavu, izdvojim vam nekoliko fotografija odmah.</p></div>
+</section>
+</main>
+
+<footer class="foot" id="kontakt">
+  <span class="m dim">Kontakt</span>
+  <h2 style="margin-top:16px"><a href="mailto:hello@ikdirected.com">Pišite<br>mi →</a></h2>
+  <p class="foot__lead">Javite mi datum i lokaciju, pa vam u dva dana šaljem cijenu i slobodne termine. Ako još niste sigurni oko datuma, slobodno pitajte što je otvoreno.</p>
+  <div class="foot__g">
+    <div><span class="m">E-mail</span><a href="mailto:hello@ikdirected.com">hello@ikdirected.com</a></div>
+    <div><span class="m">Telefon</span><a href="tel:+385910000000">+385 91 000 0000</a></div>
+    <div><span class="m">Instagram</span><a href="https://www.instagram.com/ikdirected/" rel="me noopener" target="_blank">@ikdirected</a></div>
+    <div><span class="m">Adresa</span><p class="dim">Zadar, Zadarska županija, Hrvatska</p></div>
+  </div>
+  <div class="foot__end m">
+    <span>© 2026 ikdirected</span>
+    <span>Dizajn A — Atelier</span>
+    <span>Web: <a href="https://perasma.dev" target="_blank" rel="noopener">Perasma</a></span>
+  </div>
+</footer>
+
+<div class="lb" id="lb" role="dialog" aria-modal="true" aria-label="Prikaz fotografije">
+  <div class="lb__top"><span class="m" id="lbIdx">01 / 12</span><button class="m" id="lbX">Zatvori ✕</button></div>
+  <div class="lb__stage"><img id="lbImg" alt=""></div>
+  <div class="lb__bot"><span class="m dim" id="lbCap"></span>
+    <div class="lb__nav"><button id="lbP" aria-label="Prethodna fotografija">←</button><button id="lbN" aria-label="Sljedeća fotografija">→</button></div>
+  </div>
+</div>
+
+<script type="application/ld+json">
+{
+  "@context":"https://schema.org",
+  "@graph":[
+   {
+    "@type":["ProfessionalService","LocalBusiness"],
+    "@id":"https://ikdirected.com/#business",
+    "name":"ikdirected",
+    "description":"Fotografiranje vjenčanja, evenata i portreta u Zadru i po cijeloj Hrvatskoj, uz kadrove iz zraka snimljene dronom.",
+    "url":"https://ikdirected.com/",
+    "image":"https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=1200&q=80",
+    "email":"hello@ikdirected.com",
+    "telephone":"+385910000000",
+    "priceRange":"700 € – 3.000 €",
+    "currenciesAccepted":"EUR",
+    "knowsLanguage":["hr","en"],
+    "address":{"@type":"PostalAddress","addressLocality":"Zadar","postalCode":"23000","addressRegion":"Zadarska županija","addressCountry":"HR"},
+    "geo":{"@type":"GeoCoordinates","latitude":44.119371,"longitude":15.231365},
+    "areaServed":[
+      {"@type":"City","name":"Zadar"},
+      {"@type":"AdministrativeArea","name":"Zadarska županija"},
+      {"@type":"City","name":"Nin"},{"@type":"City","name":"Biograd na Moru"},
+      {"@type":"City","name":"Šibenik"},{"@type":"City","name":"Split"},{"@type":"City","name":"Zagreb"},
+      {"@type":"Country","name":"Hrvatska"}
+    ],
+    "sameAs":["https://www.instagram.com/ikdirected/"],
+    "hasOfferCatalog":{
+      "@type":"OfferCatalog","name":"Usluge fotografiranja",
+      "itemListElement":[
+        {"@type":"Offer","price":"1200","priceCurrency":"EUR",
+         "itemOffered":{"@type":"Service","name":"Fotografiranje vjenčanja","description":"Cijeli dan od priprema do zadnjeg plesa, obrađene fotografije u online galeriji."}},
+        {"@type":"Offer","price":"150","priceCurrency":"EUR",
+         "itemOffered":{"@type":"Service","name":"Fotografiranje evenata","description":"Konferencije, otvorenja i koncerti. Trideset fotografija isti dan, ostatak u 72 sata."}},
+        {"@type":"Offer","price":"250","priceCurrency":"EUR",
+         "itemOffered":{"@type":"Service","name":"Portretno fotografiranje","description":"Portreti za web, društvene mreže i medije, u studiju ili na terenu."}},
+        {"@type":"Offer","price":"200","priceCurrency":"EUR",
+         "itemOffered":{"@type":"Service","name":"Snimanje dronom","description":"Zračni kadrovi lokacije, objekta ili proslave."}}
+      ]}
+   },
+   {"@type":"Person","@id":"https://ikdirected.com/#person","name":"IME PREZIME","jobTitle":"Fotografkinja",
+    "worksFor":{"@id":"https://ikdirected.com/#business"},"sameAs":["https://www.instagram.com/ikdirected/"]},
+   {"@type":"WebSite","@id":"https://ikdirected.com/#website","url":"https://ikdirected.com/","name":"ikdirected",
+    "inLanguage":"hr-HR","publisher":{"@id":"https://ikdirected.com/#business"}},
+   {"@type":"WebPage","@id":"https://ikdirected.com/#webpage","url":"https://ikdirected.com/",
+    "name":"Fotografkinja vjenčanja i evenata u Zadru | ikdirected",
+    "isPartOf":{"@id":"https://ikdirected.com/#website"},"about":{"@id":"https://ikdirected.com/#business"},
+    "inLanguage":"hr-HR","dateModified":"2026-08-28"},
+   {"@type":"FAQPage","@id":"https://ikdirected.com/#faq","mainEntity":[
+     {"@type":"Question","name":"Koliko košta fotografiranje vjenčanja?","acceptedAnswer":{"@type":"Answer","text":"Cijeli dan kreće od 1.200 €. U to ulaze pripreme, obred, proslava i zadnji ples, obrađene fotografije u online galeriji i pravo na ispis. Kraći paket do pet sati je 700 €."}},
+     {"@type":"Question","name":"Kada dobivam fotografije?","acceptedAnswer":{"@type":"Answer","text":"Prvih četrdesetak fotografija šaljem u roku od tjedan dana, a cijelu galeriju unutar mjesec dana od vjenčanja. Za evente je prvi izbor gotov isti dan."}},
+     {"@type":"Question","name":"Dolazite li izvan Zadra?","acceptedAnswer":{"@type":"Answer","text":"Da. U Zadarskoj županiji nema doplate, za ostatak Hrvatske dogovaramo putne troškove, a za vjenčanja u inozemstvu šaljem posebnu ponudu."}},
+     {"@type":"Question","name":"Snimate li i dronom?","acceptedAnswer":{"@type":"Answer","text":"Da, od 2026. Zračni kadrovi idu uz vjenčanja i evente na otvorenom kad lokacija dopušta letenje. Ako je riječ o zoni u kojoj treba dozvola, javljam se ranije da se to riješi na vrijeme."}},
+     {"@type":"Question","name":"Koliko ranije treba rezervirati termin?","acceptedAnswer":{"@type":"Answer","text":"Ljetne subote se obično zatvore osam do dvanaest mjeseci unaprijed. Za termine izvan sezone dovoljno je i nekoliko mjeseci."}},
+     {"@type":"Question","name":"Mogu li dobiti i neobrađene fotografije?","acceptedAnswer":{"@type":"Answer","text":"Neobrađene datoteke se ne šalju jer je obrada dio stila. Ako je nešto hitno za objavu, nekoliko fotografija izdvajam odmah."}}
+   ]}
+  ]
+}
+</script>
+
+<script>
+/* ---- galerija čita statički HTML (ostaje vidljiva i bez JS-a) ---- */
+const shots=[...document.querySelectorAll('.shot')];
+const G=shots.map(s=>({full:s.dataset.full,t:s.dataset.t,p:s.dataset.p}));
+
+/* ---- horizontalni scroll ---- */
+const hg=document.getElementById('hg')||document.querySelector('.hg'),
+      track=document.getElementById('track'),prog=document.getElementById('prog');
+const wide=()=>matchMedia('(min-width:901px)').matches;
+let maxX=0,raf=false;
+function measure(){
+  const sec=track.closest('.hg');
+  if(!wide()){sec.style.height='';track.style.transform='';return;}
+  maxX=track.scrollWidth-innerWidth;
+  sec.style.height=(maxX+innerHeight)+'px';
+}
+function onScroll(){
+  const sec=track.closest('.hg');
+  if(wide()&&maxX>0){
+    const p=Math.min(1,Math.max(0,(scrollY-sec.offsetTop)/maxX));
+    track.style.transform=`translate3d(${-p*maxX}px,0,0)`;
+    prog.style.width=(p*100)+'%';
+  }
+  raf=false;
+}
+addEventListener('scroll',()=>{if(!raf){raf=true;requestAnimationFrame(onScroll);}},{passive:true});
+addEventListener('resize',()=>{measure();onScroll();});
+
+/* ---- izjava riječ po riječ ---- */
+const say=document.getElementById('sayTxt');
+say.innerHTML=say.textContent.trim().split(/\s+/).map(w=>`<w>${w}</w>`).join(' ');
+const words=[...say.querySelectorAll('w')];
+function sayScroll(){
+  const r=say.getBoundingClientRect();
+  const p=(innerHeight*.85-r.top)/(r.height+innerHeight*.35);
+  const n=Math.round(Math.min(1,Math.max(0,p))*words.length);
+  words.forEach((w,i)=>w.classList.toggle('on',i<n));
+}
+addEventListener('scroll',sayScroll,{passive:true});
+
+/* ---- traka s mjestima ---- */
+document.getElementById('mqt').innerHTML=Array(2).fill(
+  '<span>Zadar <b>—</b> Nin <b>—</b> Pag <b>—</b> Biograd <b>—</b> Šibenik <b>—</b> Split <b>—</b> Zagreb <b>—</b> Istra <b>—</b></span>').join('');
+
+/* ---- lightbox ---- */
+const lb=document.getElementById('lb'),lbImg=document.getElementById('lbImg'),
+  lbCap=document.getElementById('lbCap'),lbIdx=document.getElementById('lbIdx');
+let li=0;
+function show(i){
+  li=(i+G.length)%G.length;
+  lbImg.src=G[li].full;lbImg.alt=G[li].t+', '+G[li].p;
+  lbCap.textContent=G[li].t+' · '+G[li].p;
+  lbIdx.textContent=String(li+1).padStart(2,'0')+' / '+String(G.length).padStart(2,'0');
+}
+function openLb(i){show(i);lb.classList.add('on');document.body.style.overflow='hidden';}
+function closeLb(){lb.classList.remove('on');document.body.style.overflow='';}
+track.addEventListener('click',e=>{const s=e.target.closest('.shot');if(s)openLb(shots.indexOf(s));});
+document.getElementById('lbX').onclick=closeLb;
+document.getElementById('lbN').onclick=()=>show(li+1);
+document.getElementById('lbP').onclick=()=>show(li-1);
+lb.addEventListener('click',e=>{if(e.target===lb||e.target.classList.contains('lb__stage'))closeLb();});
+addEventListener('keydown',e=>{
+  if(!lb.classList.contains('on'))return;
+  if(e.key==='Escape')closeLb();
+  if(e.key==='ArrowRight')show(li+1);
+  if(e.key==='ArrowLeft')show(li-1);
+});
+
+/* ---- kursor ---- */
+if(matchMedia('(hover:hover) and (pointer:fine)').matches){
+  document.documentElement.classList.add('js');
+  const cur=document.getElementById('cur');
+  let cx=innerWidth/2,cy=innerHeight/2,mx=cx,my=cy;
+  addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY;});
+  (function l(){cx+=(mx-cx)*.18;cy+=(my-cy)*.18;
+    cur.style.transform=`translate(${cx}px,${cy}px) translate(-50%,-50%)`;requestAnimationFrame(l);})();
+  document.addEventListener('mouseover',e=>cur.classList.toggle('big',!!e.target.closest('.shot')));
+}
+
+/* ---- loader ---- */
+const load=document.getElementById('load'),pct=document.getElementById('pct'),bar=document.getElementById('bar');
+const t0=performance.now();
+(function tick(now){
+  const v=Math.min(100,((now-t0)/1100)*100);
+  pct.textContent=String(Math.floor(v)).padStart(2,'0');
+  bar.style.width=v+'%';
+  if(v<100)requestAnimationFrame(tick);
+  else{load.classList.add('off');document.getElementById('hero').classList.add('go');
+       measure();onScroll();sayScroll();}
+})(t0);
+setTimeout(()=>{load.classList.add('off');document.getElementById('hero').classList.add('go');measure();onScroll();},2800);
+</script>
+</body>
+</html>

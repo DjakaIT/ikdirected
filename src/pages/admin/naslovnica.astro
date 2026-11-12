@@ -1,0 +1,8 @@
+---
+import Admin from "../../layouts/Admin.astro";
+import FeaturedScreen from "../../admin/screens/Featured.tsx";
+---
+
+<Admin title="Naslovnica" current="naslovnica">
+  <FeaturedScreen client:only="preact" />
+</Admin>

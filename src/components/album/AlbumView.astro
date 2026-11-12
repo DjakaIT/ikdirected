@@ -1,0 +1,380 @@
+---
+// Album page (DESIGN §5.3, AC-ALB-01..06). Layout is automatic: rhythm rows from aspect ratios.
+import Picture from "../Picture.astro";
+import type { Category } from "../../content/site";
+import { mediaBase } from "../../lib/data/public";
+import type { AlbumPageData, Neighbours, PublicPhoto } from "../../lib/data/types";
+import { rhythm, rowClass, type Row } from "../../lib/layout/rhythm";
+import { kindOf } from "../../lib/layout/track";
+import { mediaUrl } from "../../lib/media/srcset";
+import { monthYear } from "../../lib/text/dates";
+import { countPhotos } from "../../lib/text/plural";
+
+interface Props {
+  album: AlbumPageData;
+  category: Category;
+  neighbours: Neighbours;
+}
+
+const { album, category, neighbours } = Astro.props;
+const meta = [category.singular, album.place, monthYear(album.eventDate), countPhotos(album.photoCount)]
+  .filter(Boolean)
+  .join(" · ");
+const rows = rhythm(album.photos);
+
+/** `sizes` per row slot (12-col grid; every row is full width below 900px). */
+function sizesFor(row: Row<PublicPhoto>, slot: number): string {
+  const vw = (() => {
+    switch (row.type) {
+      case "full":
+        return 100;
+      case "offset":
+        return 84;
+      case "single":
+        return 67;
+      case "pair":
+        return row.variant === "a" ? (slot === 0 ? 58 : 42) : slot === 0 ? 42 : 58;
+    }
+  })();
+  return `(max-width: 900px) 100vw, ${vw}vw`;
+}
+
+let n = 0; // running index: first 2 grid photos are eager (AC-ALB-06)
+const total = album.photos.length;
+const pad = (i: number) => String(i).padStart(2, "0");
+---
+
+<section class="ah" aria-labelledby="alb-title">
+  <div class="ah__img">
+    <Picture
+      photo={album.cover}
+      sizes="100vw"
+      loading="eager"
+      fetchpriority="high"
+      fit="cover"
+      appear={false}
+      fallback={2400}
+    />
+  </div>
+  <nav class="ah__crumbs m" aria-label="Putanja">
+    <ol role="list">
+      <li><a href="/radovi">Radovi</a></li>
+      <li><a href={`/radovi/${category.slug}`}>{category.name}</a></li>
+      <li><span aria-current="page">{album.title}</span></li>
+    </ol>
+  </nav>
+  <div class="ah__in">
+    <p class="ah__meta m num">{meta}</p>
+    <h1 id="alb-title">{album.title}</h1>
+  </div>
+</section>
+
+{album.story && <p class="story">{album.story}</p>}
+
+<section class="rh" aria-label="Fotografije" data-lb-group>
+  {
+    rows.map((row) => (
+      <div class:list={["rh__row", rowClass(row)]}>
+        {row.items.map((photo, slot) => {
+          const i = n++;
+          const base = photo.base ?? mediaBase();
+          return (
+            <a
+              class:list={["rh__ph", "focus-inset", `k-${kindOf(photo.width, photo.height)}`]}
+              href={mediaUrl(base, photo.mediaId, 2400)}
+              data-lb-full={mediaUrl(base, photo.mediaId, 2400)}
+              data-lb-alt={photo.alt}
+              data-lb-cap={`${album.title} · ${pad(i + 1)} / ${pad(total)}`}
+            >
+              <Picture photo={photo} sizes={sizesFor(row, slot)} loading={i < 2 ? "eager" : "lazy"} />
+            </a>
+          );
+        })}
+      </div>
+    ))
+  }
+</section>
+
+<nav class="an" aria-label="Druge priče">
+  <div class="an__cell an__prev">
+    {
+      neighbours.prev && (
+        <a href={`/radovi/${neighbours.prev.slug}`}>
+          <span class="an__thumb">
+            <Picture photo={neighbours.prev.cover} sizes="(max-width: 700px) 100vw, 30vw" fit="cover" decorative />
+          </span>
+          <span class="m">← Prethodna priča</span>
+          <span class="an__t">{neighbours.prev.title}</span>
+        </a>
+      )
+    }
+  </div>
+  <div class="an__cell an__back">
+    <a class="m" href={`/radovi/${category.slug}`}>{category.backLabel}</a>
+  </div>
+  <div class="an__cell an__next">
+    {
+      neighbours.next && (
+        <a href={`/radovi/${neighbours.next.slug}`}>
+          <span class="an__thumb">
+            <Picture photo={neighbours.next.cover} sizes="(max-width: 700px) 100vw, 30vw" fit="cover" decorative />
+          </span>
+          <span class="m">Sljedeća priča →</span>
+          <span class="an__t">{neighbours.next.title}</span>
+        </a>
+      )
+    }
+  </div>
+</nav>
+
+<p class="cta"><a href="#kontakt">Vaš datum je slobodan? Provjerite.</a></p>
+
+<style>
+  /* hero */
+  .ah {
+    position: relative;
+    height: 88svh;
+    min-height: 480px;
+    overflow: hidden;
+    color: var(--fg);
+  }
+  .ah__img {
+    position: absolute;
+    inset: 0;
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .ah__img {
+      view-transition-name: album-hero; /* PD-09 */
+    }
+  }
+  .ah__img :global(.pic__img) {
+    filter: brightness(0.78);
+  }
+  .ah__img::after {
+    /* image scrim, bottom-left (DESIGN §5.3) */
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(35deg, rgba(8, 8, 8, 0.72) 0%, rgba(8, 8, 8, 0.2) 45%, rgba(8, 8, 8, 0) 70%);
+    pointer-events: none;
+  }
+  .ah__crumbs {
+    position: absolute;
+    z-index: 2;
+    top: 70px;
+    left: var(--pad);
+    right: var(--pad);
+  }
+  .ah__crumbs ol {
+    display: flex;
+    flex-wrap: wrap;
+    list-style: none;
+  }
+  .ah__crumbs li + li::before {
+    content: "/";
+    padding: 0 0.7em;
+    opacity: 0.6;
+  }
+  .ah__crumbs a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 24px;
+    opacity: 0.8;
+  }
+  .ah__crumbs a:hover {
+    opacity: 1;
+  }
+  .ah__in {
+    position: relative;
+    z-index: 2;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding: var(--pad);
+  }
+  .ah__meta {
+    margin-bottom: var(--s-4);
+  }
+  h1 {
+    font-size: clamp(2.8rem, 9vw, 9.5rem);
+    line-height: 0.88;
+    font-weight: 600;
+    font-stretch: 112%;
+    letter-spacing: var(--track-display);
+    text-transform: uppercase;
+    max-width: 14ch;
+  }
+
+  /* story */
+  .story {
+    max-width: 56ch;
+    margin: var(--s-9) var(--pad) 0;
+    font-size: var(--t-lead);
+    line-height: 1.5;
+    color: var(--fg-2);
+    white-space: pre-line;
+  }
+  @media (min-width: 901px) {
+    .story {
+      margin-left: calc(var(--pad) + (100% - 2 * var(--pad)) / 6);
+    }
+  }
+
+  /* rhythm rows (ARCHITECTURE §7.1) */
+  .rh {
+    display: flex;
+    flex-direction: column;
+    gap: clamp(48px, 7vw, 120px);
+    padding: var(--s-9) var(--pad) var(--section);
+  }
+  .rh__row {
+    display: grid;
+    grid-template-columns: repeat(12, 1fr);
+    column-gap: var(--s-5);
+    align-items: start;
+  }
+  .rh__ph {
+    display: block;
+    overflow: hidden;
+    background: var(--bg-2);
+  }
+  .rh__ph :global(.pic__img) {
+    transition:
+      transform 1.2s var(--ease-out),
+      opacity var(--d-3) var(--ease-out);
+  }
+  .rh__ph:hover :global(.pic__img) {
+    transform: scale(1.02);
+  }
+  .r-full .rh__ph {
+    grid-column: 1 / 13;
+    margin-inline: calc(var(--pad) * -1); /* bleeds to the viewport edges */
+  }
+  .r-offset-right .rh__ph {
+    grid-column: 3 / 13;
+  }
+  .r-offset-left .rh__ph {
+    grid-column: 1 / 11;
+  }
+  .r-single .rh__ph {
+    grid-column: 3 / 11;
+  }
+  /* A lone portrait or square stays inside its 8/12 column but never taller than the screen. */
+  .r-single .rh__ph.k-tall {
+    justify-self: center;
+    width: min(100%, 60svh);
+  }
+  .r-single .rh__ph.k-square {
+    justify-self: center;
+    width: min(100%, 86svh);
+  }
+  .r-pair-a .rh__ph:nth-child(1) {
+    grid-column: 1 / 8;
+  }
+  .r-pair-a .rh__ph:nth-child(2) {
+    grid-column: 8 / 13;
+    margin-top: 12vh;
+  }
+  .r-pair-b .rh__ph:nth-child(1) {
+    grid-column: 1 / 6;
+    margin-top: 12vh;
+  }
+  .r-pair-b .rh__ph:nth-child(2) {
+    grid-column: 6 / 13;
+  }
+  @media (max-width: 900px) {
+    .rh__row .rh__ph {
+      grid-column: 1 / 13;
+      margin-top: 0;
+    }
+    .r-pair {
+      row-gap: var(--s-5);
+    }
+    .r-full .rh__ph {
+      margin-inline: calc(var(--pad) * -1);
+    }
+  }
+
+  /* previous / all / next */
+  .an {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--s-6);
+    padding: var(--s-8) var(--pad);
+    border-top: 1px solid var(--line);
+  }
+  @media (min-width: 701px) {
+    .an {
+      grid-template-columns: 1fr auto 1fr;
+      align-items: end;
+    }
+    .an__next {
+      text-align: right;
+    }
+  }
+  .an__cell a {
+    display: block;
+  }
+  .an__thumb {
+    position: relative;
+    display: block;
+    aspect-ratio: 3 / 2;
+    max-width: 360px;
+    margin-bottom: var(--s-4);
+    overflow: hidden;
+    background: var(--bg-2);
+  }
+  .an__next .an__thumb {
+    margin-left: auto;
+  }
+  .an__thumb :global(.pic__img) {
+    filter: brightness(0.86);
+    transition: filter 0.6s;
+  }
+  .an__cell a:hover .an__thumb :global(.pic__img) {
+    filter: brightness(1);
+  }
+  .an__t {
+    display: block;
+    margin-top: var(--s-2);
+    font-size: calc(var(--t-h3) * 0.6);
+    font-weight: 600;
+    font-stretch: 110%;
+    text-transform: uppercase;
+    color: var(--fg);
+  }
+  .an .m {
+    color: var(--dim);
+  }
+  .an__back {
+    display: flex;
+    justify-content: center;
+  }
+  .an__back a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    color: var(--fg);
+    border-bottom: 1px solid var(--line-2);
+  }
+
+  /* call to action */
+  .cta {
+    padding: clamp(60px, 9vw, 120px) var(--pad);
+    border-block: 1px solid var(--line);
+    font-size: var(--t-h2);
+    font-weight: 500;
+    font-stretch: 108%;
+    letter-spacing: -0.035em;
+    line-height: 1.05;
+    text-transform: uppercase;
+    color: var(--fg);
+  }
+  .cta a {
+    transition: opacity var(--d-2) var(--ease-out);
+  }
+  .cta a:hover {
+    opacity: 0.55;
+  }
+</style>

@@ -1,0 +1,78 @@
+---
+// One segment, two meanings (ARCHITECTURE §2): a category slug renders the filtered archive,
+// anything else is a published album slug. Only those pages are generated, so unknown, draft and
+// deleted slugs all get the same static 404 page (AC-ALB-05, SEC-ENUM-01).
+import type { GetStaticPaths } from "astro";
+import type { ComponentProps } from "astro/types";
+import Public from "../../layouts/Public.astro";
+import JsonLd from "../../components/JsonLd.astro";
+import Lightbox from "../../components/Lightbox.astro";
+import ArchivePage from "../../components/archive/ArchivePage.astro";
+import AlbumView from "../../components/album/AlbumView.astro";
+import { categoryBySlug, site } from "../../content/site";
+import { getAlbumBySlug, getNeighbours, listAlbumSlugs, mediaBase } from "../../lib/data/public";
+import { siteOrigin } from "../../lib/env";
+import { mediaUrl } from "../../lib/media/srcset";
+import { albumGraph } from "../../lib/seo/jsonld";
+import { monthYear } from "../../lib/text/dates";
+import { countPhotos } from "../../lib/text/plural";
+
+export const getStaticPaths = (async () => [
+  ...site.categories.map((c) => ({ params: { seg: c.slug } })),
+  ...(await listAlbumSlugs()).map((slug) => ({ params: { seg: slug } })),
+]) satisfies GetStaticPaths;
+
+const seg = Astro.params.seg ?? "";
+const origin = siteOrigin();
+const category = categoryBySlug(seg);
+
+let view: { props: ComponentProps<typeof AlbumView> } | null = null;
+let head: { title: string; description: string; path: string; graph: unknown; image?: { url: string; width: number; height: number; alt: string } } | null = null;
+
+if (!category) {
+  const album = await getAlbumBySlug(seg);
+  if (!album) throw new Error(`album ${seg} is not in the content`);
+  const albumCategory = categoryBySlug(album.category)!;
+  const neighbours = await getNeighbours(album);
+  const base = album.cover.base ?? mediaBase();
+  const metaLine = [albumCategory.singular, album.place, monthYear(album.eventDate), countPhotos(album.photoCount)]
+    .filter(Boolean)
+    .join(" · ");
+  view = { props: { album, category: albumCategory, neighbours } };
+  head = {
+    title: `${album.title} — ${albumCategory.singular.toLowerCase()}${album.place ? `, ${album.place}` : ""} | ${site.brand}`,
+    description: album.story ? album.story.slice(0, 155) : metaLine,
+    path: `/radovi/${album.slug}`,
+    image: { url: mediaUrl(base, album.cover.mediaId, 1280), width: 1280, height: Math.round((1280 * album.cover.height) / album.cover.width), alt: album.cover.alt },
+    graph: albumGraph(
+      origin,
+      { slug: album.slug, title: album.title, description: album.story || metaLine, place: album.place, eventDate: album.eventDate },
+      album.photos.slice(0, 24).map((p) => ({
+        url: mediaUrl(p.base ?? mediaBase(), p.mediaId, 1280),
+        width: p.width,
+        height: p.height,
+        caption: p.alt,
+      })),
+      [
+        { name: "Naslovnica", path: "/" },
+        { name: "Radovi", path: "/radovi" },
+        { name: albumCategory.name, path: `/radovi/${albumCategory.slug}` },
+        { name: album.title, path: `/radovi/${album.slug}` },
+      ],
+    ),
+  };
+}
+---
+
+{category ? (
+  <ArchivePage category={category.slug} page={1} />
+) : (
+  view &&
+  head && (
+    <Public title={head.title} description={head.description} path={head.path} image={head.image} type="article">
+      <JsonLd slot="head" data={head.graph} />
+      <AlbumView {...view.props} />
+      <Lightbox slot="end" />
+    </Public>
+  )
+)}

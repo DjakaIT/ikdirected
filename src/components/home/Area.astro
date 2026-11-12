@@ -1,0 +1,101 @@
+---
+import { site } from "../../content/site";
+const [first, ...rest] = site.area.paragraphs;
+// Rendered twice server-side so the CSS loop is seamless; decorative only (PD-12).
+const loop = [0, 1];
+---
+
+<section class="area" id="podrucje" aria-labelledby="podrucje-title">
+  <h2 id="podrucje-title">{site.area.heading}</h2>
+  <div>
+    <p>{first}</p>
+    {rest.map((p) => <p>{p}</p>)}
+  </div>
+</section>
+
+<div class="mq" aria-hidden="true">
+  <div class="mq__run">
+    {
+      loop.map(() => (
+        <span>
+          {site.area.marquee.map((place) => (
+            <>
+              {place}
+              {" "}
+              <b>—</b>
+              {" "}
+            </>
+          ))}
+        </span>
+      ))
+    }
+  </div>
+</div>
+
+<style>
+  .area {
+    padding: clamp(60px, 9vw, 120px) var(--pad) 0;
+    display: grid;
+    gap: clamp(20px, 3vw, 50px);
+  }
+  @media (min-width: 820px) {
+    .area {
+      grid-template-columns: 0.55fr 1fr;
+      align-items: start;
+    }
+  }
+  h2 {
+    font-size: clamp(1.6rem, 3.4vw, 2.6rem);
+    font-weight: 500;
+    letter-spacing: -0.03em;
+    text-transform: uppercase;
+    font-stretch: 106%;
+  }
+  p {
+    max-width: 62ch;
+    font-size: clamp(1rem, 1.4vw, 1.2rem);
+    color: var(--fg);
+  }
+  p + p {
+    margin-top: 14px;
+    color: var(--dim);
+  }
+  .mq {
+    border-block: 1px solid var(--line);
+    padding: 16px 0;
+    overflow: hidden;
+    margin-top: clamp(50px, 8vw, 110px);
+    color: var(--fg);
+  }
+  .mq__run {
+    display: flex;
+    gap: 36px;
+    width: max-content;
+    animation: mq 38s linear infinite;
+  }
+  .mq:hover .mq__run {
+    animation-play-state: paused; /* PD-12 */
+  }
+  .mq span {
+    font-size: clamp(1.4rem, 3.2vw, 2.6rem);
+    font-weight: 400;
+    text-transform: uppercase;
+    letter-spacing: -0.02em;
+    white-space: nowrap;
+    font-stretch: 110%;
+  }
+  .mq b {
+    font-weight: 300;
+    opacity: 0.32;
+  }
+  @keyframes mq {
+    to {
+      transform: translateX(calc(-50% - 18px));
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .mq__run {
+      animation: none;
+    }
+  }
+</style>

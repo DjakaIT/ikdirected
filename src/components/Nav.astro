@@ -1,0 +1,54 @@
+---
+// Reference nav (atelier.html L98–101, L227–230): brand left, "Provjerite termin" right,
+// blended over whatever sits beneath it.
+interface Props {
+  current?: "home" | undefined;
+}
+const { current } = Astro.props;
+---
+
+<header class="nav">
+  <nav aria-label="Glavna navigacija">
+    <a href="/" aria-current={current === "home" ? "page" : undefined}>ikdirected</a>
+    <a href="#kontakt" class="m">Provjerite termin</a>
+  </nav>
+</header>
+
+<style>
+  .nav {
+    position: fixed;
+    inset: 0 0 auto 0;
+    z-index: var(--z-nav);
+    mix-blend-mode: difference;
+    color: var(--fg);
+  }
+  nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--s-4);
+    padding: 17px var(--pad); /* 20px in the reference, minus the 24px tap-target growth */
+  }
+  a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 24px;
+    letter-spacing: 0.34em;
+    text-transform: uppercase;
+    font-size: 0.75rem; /* .72rem in the reference, raised to the 12px floor (PD-02) */
+    font-weight: 400;
+    white-space: nowrap;
+  }
+  .m {
+    opacity: 0.75;
+    transition: opacity var(--d-1) var(--ease-out);
+  }
+  .m:hover {
+    opacity: 1;
+  }
+  @media (max-width: 380px) {
+    a {
+      letter-spacing: 0.22em;
+    }
+  }
+</style>

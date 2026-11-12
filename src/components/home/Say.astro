@@ -1,0 +1,46 @@
+---
+import { site } from "../../content/site";
+---
+
+<section class="say" aria-labelledby="say-label">
+  <h2 id="say-label" class="m dim">{site.say.label}</h2>
+  <p data-reveal>{site.say.text}</p>
+</section>
+
+<script>
+  import { initReveal } from "../../scripts/public/reveal";
+  initReveal();
+</script>
+
+<style>
+  .say {
+    padding: clamp(110px, 20vh, 220px) var(--pad);
+    max-width: 1180px;
+    margin-inline: auto;
+  }
+  h2 {
+    display: block;
+    margin-bottom: clamp(28px, 5vw, 56px);
+    color: var(--dim);
+    font-weight: 400;
+  }
+  p {
+    font-size: clamp(1.4rem, 3.9vw, 3.2rem);
+    line-height: 1.16;
+    font-weight: 300;
+    letter-spacing: -0.025em;
+    color: var(--fg);
+  }
+  p :global(.w) {
+    opacity: 0.28; /* PD-10 */
+    transition: opacity 0.5s ease;
+  }
+  p :global(.w.on) {
+    opacity: 1;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    p :global(.w) {
+      opacity: 1;
+    }
+  }
+</style>

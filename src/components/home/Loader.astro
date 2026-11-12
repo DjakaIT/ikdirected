@@ -1,0 +1,75 @@
+---
+// PD-05: first home visit per session only (the head script sets html.is-loading), progress tied
+// to the hero image decode, content already in the DOM underneath. A CSS timeout hides it even
+// if JS fails after the class was set.
+---
+
+<div class="load" aria-hidden="true" data-loader>
+  <b>ikdirected</b>
+  <i class="m num" data-loader-pct>00</i>
+  <u data-loader-bar></u>
+</div>
+
+<script>
+  import { initLoader } from "../../scripts/public/loader";
+  initLoader();
+</script>
+
+<style>
+  .load {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: var(--z-load);
+    background: var(--bg);
+    color: var(--fg);
+    place-items: center;
+    transition:
+      opacity 0.7s ease 0.15s,
+      visibility 0.7s 0.15s;
+  }
+  :global(html.is-loading) .load {
+    display: grid;
+    animation: load-safety 0.5s ease 2.8s forwards;
+  }
+  .load.off {
+    opacity: 0;
+    visibility: hidden;
+  }
+  b {
+    font-weight: 400;
+    letter-spacing: 0.5em;
+    text-transform: uppercase;
+    font-size: 0.8rem;
+    padding-left: 0.5em;
+  }
+  i {
+    position: absolute;
+    right: var(--pad);
+    bottom: var(--pad);
+    font-style: normal;
+    letter-spacing: 0; /* reference .7rem mono, raised to the 12px floor */
+  }
+  u {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 1px;
+    background: var(--fg);
+    transform: scaleX(0);
+    transform-origin: 0 50%;
+    text-decoration: none;
+  }
+  @keyframes load-safety {
+    to {
+      opacity: 0;
+      visibility: hidden;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .load {
+      display: none !important;
+    }
+  }
+</style>

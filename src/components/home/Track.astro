@@ -1,0 +1,286 @@
+---
+// Horizontal gallery (reference §hg + PD-07/08). Without JS, on narrow screens and under reduced
+// motion it is a native horizontal scroll row (AC-HOME-06); JS pins it and lerps on wide screens.
+import Picture from "../Picture.astro";
+import { site } from "../../content/site";
+import { mediaBase } from "../../lib/data/public";
+import { trackClass } from "../../lib/layout/track";
+import { mediaUrl } from "../../lib/media/srcset";
+import { numberWordFeminine, plural } from "../../lib/text/plural";
+import type { TrackItem } from "../../lib/data/types";
+
+interface Props {
+  items: TrackItem[];
+  publishedCount: number;
+}
+
+const { items, publishedCount } = Astro.props;
+const pad = (n: number) => String(n).padStart(2, "0");
+const year = (d: string) => d.slice(0, 4);
+
+// Reference intro: "Dvanaest fotografija iz 2024. – 2026. Kliknite za veliki prikaz."
+const years = items.map((it) => Number(year(it.album.eventDate)));
+const from = Math.min(...years);
+const to = Math.max(...years);
+const word = numberWordFeminine(items.length);
+const plural12 = plural(items.length, "fotografija", "fotografije", "fotografija");
+const leadStart = items.length ? `${word.charAt(0).toUpperCase()}${word.slice(1)} ${plural12} iz ` : "";
+const range = items.length ? (from === to ? `${from}.` : `${from}. – ${to}.`) : "";
+---
+
+<section
+  class="hg"
+  id="rad"
+  aria-labelledby="hg-title"
+  aria-roledescription="galerija"
+  tabindex="0"
+  data-track
+  data-lb-group
+>
+  <div class="hg__sticky">
+    <div class="hg__track" data-track-rail>
+      <div class="hg__intro">
+        <span class="m dim">{site.gallery.label}</span>
+        <h2 id="hg-title">{site.gallery.title}</h2>
+        <p>{leadStart}<span class="nw">{range}</span> Kliknite za veliki prikaz.</p>
+      </div>
+
+      {
+        items.map((it) => {
+          const base = it.photo.base ?? mediaBase();
+          const cap = `${it.album.title} · ${it.album.place} · ${year(it.album.eventDate)}.`;
+          return (
+            <figure class:list={["shot", trackClass(it.photo.width, it.photo.height)]} data-track-item>
+              <a
+                class="shot__f focus-inset"
+                href={`/radovi/${it.album.slug}`}
+                data-lb-full={mediaUrl(base, it.photo.mediaId, 2400)}
+                data-lb-alt={it.photo.alt}
+                data-lb-cap={cap}
+                data-lb-album={`/radovi/${it.album.slug}`}
+              >
+                <Picture photo={it.photo} sizes="(max-width: 900px) 84vw, 38vw" />
+              </a>
+              <figcaption>
+                <span class="m">{it.album.title}</span>
+                <span class="m">
+                  {it.album.place} · {year(it.album.eventDate)}.
+                </span>
+              </figcaption>
+            </figure>
+          );
+        })
+      }
+
+      <div class="hg__end">
+        <div>
+          <p>Ovdje bi mogao biti vaš dan.<br /><a href="#kontakt">Provjerite termin →</a></p>
+          <p class="hg__all m"><a href="/radovi">Sve priče ({publishedCount}) →</a></p>
+        </div>
+      </div>
+    </div>
+
+    <div class="hg__meta" aria-hidden="true">
+      <span class="m num" data-track-count>01 / {pad(items.length)}</span>
+      <span class="hg__bar"><i data-track-bar></i></span>
+    </div>
+  </div>
+</section>
+
+<script>
+  import { initTrack } from "../../scripts/public/track";
+  initTrack();
+</script>
+
+<style>
+  .hg {
+    position: relative;
+    outline-offset: -6px;
+  }
+  .hg__sticky {
+    position: relative;
+  }
+  .hg__track {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: clamp(14px, 2.2vw, 40px);
+    padding: 20px var(--pad) 72px;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scroll-padding-inline: var(--pad);
+    scrollbar-width: none;
+  }
+  .hg__track::-webkit-scrollbar {
+    display: none;
+  }
+  .hg__intro {
+    flex: none;
+    width: clamp(200px, 20vw, 300px);
+    padding-right: 2vw;
+    scroll-snap-align: start;
+  }
+  .hg__intro h2 {
+    font-size: clamp(1.6rem, 2.6vw, 2.4rem);
+    font-weight: 500;
+    letter-spacing: -0.03em;
+    line-height: 1;
+    margin: 12px 0 14px;
+    text-transform: uppercase;
+    font-stretch: 108%;
+  }
+  .hg__intro p {
+    color: var(--dim);
+  }
+  .nw {
+    white-space: nowrap;
+  }
+  .shot {
+    flex: none;
+    position: relative;
+    scroll-snap-align: center;
+  }
+  .t-wide {
+    width: min(88vw, 38rem);
+  }
+  .t-tall {
+    width: min(72vw, 24rem);
+  }
+  .t-square {
+    width: min(84vw, 30rem);
+  }
+  @media (min-width: 901px) {
+    .t-wide {
+      width: min(38vw, 100svh);
+    }
+    .t-tall {
+      width: min(22vw, 48svh);
+    }
+    .t-square {
+      width: min(29vw, 62svh);
+    }
+  }
+  .shot__f {
+    display: block;
+    overflow: hidden;
+    background: var(--bg-2);
+  }
+  .shot__f :global(.pic__img) {
+    filter: brightness(0.86);
+    transition:
+      transform 1.2s var(--ease-out),
+      filter 0.6s,
+      opacity var(--d-3) var(--ease-out);
+  }
+  .shot__f:hover :global(.pic__img),
+  .shot__f:focus-visible :global(.pic__img) {
+    transform: scale(1.045);
+    filter: brightness(1);
+  }
+  figcaption {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    margin-top: 11px;
+    color: var(--dim); /* PD-08 */
+    transition: color var(--d-2) var(--ease-out);
+  }
+  .shot.is-near figcaption {
+    color: var(--fg);
+  }
+  .hg__end {
+    flex: none;
+    width: 36vw;
+    display: flex;
+    align-items: center;
+    padding-left: 2vw;
+    scroll-snap-align: center;
+  }
+  .hg__end p {
+    font-size: clamp(1.15rem, 2.1vw, 1.9rem);
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+    color: var(--fg);
+  }
+  .hg__end a {
+    border-bottom: 1px solid var(--line);
+  }
+  .hg__end .hg__all {
+    margin-top: var(--s-6);
+    font-size: var(--t-meta);
+    letter-spacing: var(--track-caps);
+  }
+  @media (max-width: 900px) {
+    .hg__intro {
+      width: 70vw;
+    }
+    .hg__end {
+      width: 80vw;
+    }
+  }
+  .hg__meta {
+    display: none;
+    position: absolute;
+    left: var(--pad);
+    right: var(--pad);
+    bottom: 26px;
+    align-items: center;
+    gap: var(--s-4);
+    color: var(--fg);
+  }
+  :global(html.js) .hg__meta {
+    display: flex;
+  }
+  .hg__bar {
+    flex: 1;
+    height: 1px;
+    background: var(--line);
+  }
+  .hg__bar i {
+    display: block;
+    height: 1px;
+    background: var(--fg);
+    transform: scaleX(0);
+    transform-origin: 0 50%;
+  }
+
+  /* Pinned mode (set by JS on wide screens with motion allowed). */
+  .hg.is-pinned .hg__sticky {
+    position: sticky;
+    top: 0;
+    height: 100svh;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+  }
+  .hg.is-pinned .hg__track {
+    overflow: visible;
+    scroll-snap-type: none;
+    padding-block: 0;
+    will-change: transform;
+  }
+  .hg.is-pinned .shot:nth-of-type(8n + 1) {
+    transform: translateY(-4vh);
+  }
+  .hg.is-pinned .shot:nth-of-type(8n + 2) {
+    transform: translateY(6vh);
+  }
+  .hg.is-pinned .shot:nth-of-type(8n + 3) {
+    transform: translateY(-8vh);
+  }
+  .hg.is-pinned .shot:nth-of-type(8n + 4) {
+    transform: translateY(4vh);
+  }
+  .hg.is-pinned .shot:nth-of-type(8n + 5) {
+    transform: translateY(-6vh);
+  }
+  .hg.is-pinned .shot:nth-of-type(8n + 6) {
+    transform: translateY(8vh);
+  }
+  .hg.is-pinned .shot:nth-of-type(8n + 7) {
+    transform: translateY(-3vh);
+  }
+  .hg.is-pinned .shot:nth-of-type(8n + 8) {
+    transform: translateY(5vh);
+  }
+</style>

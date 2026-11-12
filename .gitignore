@@ -1,0 +1,42 @@
+# dependencies
+node_modules/
+
+# build output
+dist/
+.astro/
+.wrangler/
+
+# secrets (never commit)
+.dev.vars
+.dev.vars.*
+!.dev.vars.example
+.env
+.env.*
+
+# original photos for scripts/import-photos.mjs (only generated WebP is committed)
+photos/
+
+# test output
+test-results/
+playwright-report/
+blob-report/
+coverage/
+
+# logs
+*.log
+npm-debug.log*
+
+# editor / os
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+
+# local dev tools (portable PHP for tests)
+.tools/
+
+# local admin data and uploads (npm run dev / preview / tests)
+.local/
+# hosting package (npm run paket)
+hosting/
+hosting.zip

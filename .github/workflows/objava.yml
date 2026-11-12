@@ -1,0 +1,112 @@
+# Checks and the build of the site for the hosting (Hostinger: LiteSpeed/Apache + PHP). Model: CamelliaSinensis.
+#  - push to main (code): checks (npm run gate) -> publish
+#  - repository_dispatch "sadrzaj" (the admin on the hosting pushed the public export to branch sadrzaj): publish now
+#  - by hand: Actions -> Objava -> Run workflow
+# Publish: code from main + sadrzaj/sadrzaj.json from branch sadrzaj -> astro build -> npm run paket -> commit of
+# hosting/ to branch "hosting". hPanel (Create site -> Deploy from Git, branch hosting, auto-deploy) pulls that
+# branch into public_html. Admin data and photos stay on the hosting outside public_html; a build never sees them.
+#
+# Settings (Settings -> Secrets and variables -> Actions -> Variables):
+#   OBJAVA_UKLJUCENA = da                      without it only the checks run: NOTHING IS PUBLISHED
+#   SITE_ORIGIN      = https://<domena>        the public address (canonical links, sitemap, API origin check)
+name: Objava
+run-name: ${{ github.event_name == 'repository_dispatch' && format('Objava {0}', github.event.client_payload.sha) || format('Objava koda {0}', github.sha) }}
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  repository_dispatch:
+    types: [sadrzaj]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.event_name == 'pull_request' && github.ref || 'objava' }}
+  cancel-in-progress: false
+
+jobs:
+  provjere:
+    if: github.event_name == 'push' || github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+      - run: php -v && php -m | grep -iE '^(mbstring|curl|zip|json)$'
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      # check + build + unit/PHP API tests + e2e against the built site and the PHP API
+      - run: npm run gate
+      - run: npm audit --omit=dev --audit-level=high
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: failure()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
+
+  objava:
+    needs: provjere
+    if: always() && vars.OBJAVA_UKLJUCENA == 'da' && github.event_name != 'pull_request' && (needs.provjere.result == 'success' || needs.provjere.result == 'skipped')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: write # commit the package to branch hosting
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+      - name: Sadržaj iz administracije (grana sadrzaj)
+        id: sadrzaj
+        run: |
+          mkdir -p sadrzaj
+          if git ls-remote --exit-code --heads origin sadrzaj > /dev/null; then
+            git fetch --depth=1 origin sadrzaj
+            git show FETCH_HEAD:sadrzaj/sadrzaj.json > sadrzaj/sadrzaj.json
+            echo "sha=$(git rev-parse FETCH_HEAD)" >> "$GITHUB_OUTPUT"
+            echo "albuma: $(node -p "require('./sadrzaj/sadrzaj.json').albums.length")"
+          else
+            # never the demo content on the real site: before the first publish the site has no albums
+            echo '{"format":1,"albums":[],"photos":[]}' > sadrzaj/sadrzaj.json
+            echo "sha=" >> "$GITHUB_OUTPUT"
+            echo "Grana sadrzaj još ne postoji — stranica se gradi bez albuma."
+          fi
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+        env:
+          IK_SADRZAJ: sadrzaj/sadrzaj.json
+          SITE_ORIGIN: ${{ vars.SITE_ORIGIN }}
+      - run: npm run paket
+        env:
+          SITE_ORIGIN: ${{ vars.SITE_ORIGIN }}
+          IK_SADRZAJ_SHA: ${{ steps.sadrzaj.outputs.sha }}
+      # branch hosting = exactly the content of public_html; hPanel Git deploys it on every push
+      - name: Paket na granu hosting
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          DIR="$(mktemp -d)"
+          if git ls-remote --exit-code --heads origin hosting > /dev/null; then
+            git fetch --depth=1 origin hosting
+            git worktree add -B hosting "$DIR" FETCH_HEAD
+          else
+            git worktree add --orphan -b hosting "$DIR"
+          fi
+          rsync -a --delete --exclude=.git hosting/ "$DIR"/
+          cd "$DIR"
+          git add -A
+          git commit -q -m "Objava ${{ steps.sadrzaj.outputs.sha || github.sha }}"
+          git push origin hosting
+          echo "grana hosting: $(git rev-parse --short HEAD), $(git ls-files | wc -l) datoteka"

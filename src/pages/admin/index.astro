@@ -1,0 +1,8 @@
+---
+import Admin from "../../layouts/Admin.astro";
+import AlbumsScreen from "../../admin/screens/Albums.tsx";
+---
+
+<Admin title="Albumi" current="albumi">
+  <AlbumsScreen client:only="preact" />
+</Admin>

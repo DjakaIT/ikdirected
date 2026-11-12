@@ -1,0 +1,54 @@
+---
+// Admin shell (DESIGN §6, AC-ADM-03/04): same tokens and fonts, no grain / cursor / loader /
+// view transitions, noindex. Sign-in and the account menu are islands (AuthGate, AccountBar) that
+// talk to the PHP API; this static shell holds no data.
+import { Font } from "astro:assets";
+import "../styles/tokens.css";
+import "../styles/base.css";
+import "../styles/admin.css";
+import Toaster from "../admin/Toast.tsx";
+import AccountBar from "../admin/AccountBar.tsx";
+
+interface Props {
+  title: string;
+  current?: "albumi" | "naslovnica" | undefined;
+}
+
+const { title, current } = Astro.props;
+Astro.csp?.insertDirective("img-src 'self' data: blob:");
+Astro.csp?.insertDirective("worker-src 'self' blob:");
+// the WebP WASM fallback (older Safari) needs WebAssembly compilation
+Astro.csp?.insertScriptResource("'self'");
+Astro.csp?.insertScriptResource("'wasm-unsafe-eval'");
+---
+
+<!doctype html>
+<html lang="hr" class="adm">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="theme-color" content="#0A0A0A" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <title>{title} · ikdirected admin</title>
+    <Font cssVariable="--font-archivo" preload={[{ subset: "latin" }]} />
+    <Font cssVariable="--font-space-mono" />
+  </head>
+  <body>
+    <a class="skip m" href="#sadrzaj">Prijeđi na sadržaj</a>
+    <header class="adm-top">
+      <div class="adm-top__in">
+        <a class="adm-top__brand" href="/admin">ikdirected<span>&nbsp;/ admin</span></a>
+        <nav class="adm-top__nav" aria-label="Administracija">
+          <a href="/admin" aria-current={current === "albumi" ? "page" : undefined}>Albumi</a>
+          <a href="/admin/naslovnica" aria-current={current === "naslovnica" ? "page" : undefined}>Naslovnica</a>
+        </nav>
+        <AccountBar client:only="preact" />
+      </div>
+    </header>
+    <main id="sadrzaj" class="adm-main" tabindex="-1">
+      <slot />
+    </main>
+    <Toaster client:load />
+  </body>
+</html>
