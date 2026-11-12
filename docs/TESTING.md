@@ -20,7 +20,7 @@ Daniel checks SETUP §8 on the hosting.
 `scripts/php.mjs` uses `$PHP_BIN`, else `.tools/php/php.exe` with `.tools/php/php.ini`, else `php` on PATH.
 `.tools/` is git-ignored. To recreate it: download the official *VS17 x64 Non Thread Safe* zip of PHP 8.4 from
 downloads.php.net/~windows/releases (check the SHA-256 against `sha256sum.txt` there), unzip into `.tools/php/`,
-and write `.tools/php/php.ini` with `extension_dir = "ext"` and `extension=` gd, mbstring, curl, zip, fileinfo,
+and write `.tools/php/php.ini` with `extension_dir = "ext"` and `extension=` gd, mbstring, curl, fileinfo,
 openssl, exif, intl. Code must stay PHP 8.1-compatible.
 
 ## 3. Commands

@@ -135,9 +135,11 @@ server-side · client re-encode removes metadata. Same origin as the site (ARCHI
 
 ## 8. Dependencies and config
 
-- Pin exact versions (`save-exact=true`). Commit `package-lock.json`. CI: `npm audit --omit=dev --audit-level=high`.
+- Pin exact versions (`save-exact=true`). Commit `package-lock.json`. CI runs `npm audit --omit=dev --audit-level=high`
+  (reported, not blocking since 2026-11-12: the open advisories are in Astro 6 and its sharp/esbuild, fixed only in
+  Astro 7, and none applies to static output with passthrough images — upgrade planned in PLAN H7).
 - PHP: built-in functions only (no Composer); must run on PHP 8.1+; `index.php` refuses to run without
-  mbstring, json, zip, curl (or allow_url_fopen).
+  mbstring, json, curl (or allow_url_fopen).
 - Astro: `image: { service: passthroughImageService() }`, no remote patterns.
 - Secrets: only the GitHub token, entered by Daniel in the admin and stored in the data folder. Nothing secret in
   the repository, the package or GitHub variables.

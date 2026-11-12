@@ -8,12 +8,12 @@ ini_set('display_errors', '0');
 ini_set('log_errors', '1');
 header_remove('X-Powered-By');
 
-$missing = array_values(array_filter(['mbstring', 'json', 'zip'], fn ($e) => !extension_loaded($e)));
+$missing = array_values(array_filter(['mbstring', 'json'], fn ($e) => !extension_loaded($e)));
 if (!extension_loaded('curl') && !ini_get('allow_url_fopen')) $missing[] = 'curl';
 if (PHP_VERSION_ID < 80100 || $missing) {
     http_response_code(500);
     header('Content-Type: text/plain; charset=utf-8');
-    echo "Administracija treba PHP 8.1 ili noviji s proširenjima mbstring, json, zip i curl.\n"
+    echo "Administracija treba PHP 8.1 ili noviji s proširenjima mbstring, json i curl.\n"
         . 'Sada: PHP ' . PHP_VERSION . ($missing ? ', nedostaje: ' . implode(', ', $missing) : '')
         . "\nHostinger: hPanel -> Napredno -> PHP konfiguracija -> PHP 8.3 ili 8.4, pa PHP proširenja.";
     exit;
